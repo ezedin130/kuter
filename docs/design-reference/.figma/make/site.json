@@ -1,0 +1,10 @@
+{
+  "description": "Manage building materials inventory efficiently with multi-tenant SaaS offering product catalog, stock tracking, unit conversions, and subscription control.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

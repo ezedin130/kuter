@@ -1,0 +1,104 @@
+@import './tokens.css';
+@import './admin.css';
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.admin-sidebar {
+  width: 260px;
+  background-color: var(--ink);
+  color: #c8d5d9;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid #234559;
+}
+
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid #234559;
+}
+
+.sidebar-header .kuter-logo {
+  color: white;
+}
+
+.sidebar-nav {
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  color: #a0b6c2;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.sidebar-link.active {
+  background-color: var(--teal);
+  color: white;
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #234559;
+  font-size: 11px;
+  color: #728d9c;
+}
+
+.admin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-topbar {
+  height: 64px;
+  background-color: white;
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topbar-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-content {
+  padding: 32px;
+  flex: 1;
+  overflow-y: auto;
+}

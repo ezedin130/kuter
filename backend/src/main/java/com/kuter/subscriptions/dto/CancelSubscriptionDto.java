@@ -1,0 +1,20 @@
+package com.kuter.subscriptions.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CancelSubscriptionDto {
+
+    @NotBlank(message = "Cancellation reason is mandatory")
+    private String reason;
+
+    @Builder.Default
+    private boolean immediate = false;
+}

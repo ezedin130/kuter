@@ -1,0 +1,93 @@
+# Environment and Secret Files
+.env
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
+!.env.*.example
+!**/.env.example
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+*.jks
+*.keystore
+
+# Java & Spring Boot
+target/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# Maven Wrapper binaries (preserve scripts)
+.mvn/wrapper/maven-wrapper.jar
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+build/
+coverage/
+*.lcov
+*.tsbuildinfo
+.tsbuildinfo
+.vite/
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+.stylelintcache
+.pnpm-debug.log*
+.pnpm-store/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Database & Docker Local Volumes
+postgres_data/
+docker_data/
+*.sqlite
+*.db
+
+# Logs
+logs/
+*.log
+
+# IDE & Editor Configuration
+.idea/
+*.iml
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Temporary, Scratch & Platform Files
+temp/
+scratch/
+tmp/
+.tmp-*
+.claude-replay*
+design-context/

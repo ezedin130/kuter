@@ -1,0 +1,44 @@
+package com.kuter.catalog.dto;
+
+import com.kuter.catalog.ProductStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ProductDetailResponse {
+
+    private UUID id;
+    private String sku;
+    private String name;
+    private String description;
+    private UUID categoryId;
+    private String categoryName;
+    private UUID baseUnitId;
+    private String baseUnitCode;
+    private String baseUnitName;
+    private BigDecimal costPrice;
+    private BigDecimal sellingPrice;
+    private BigDecimal reorderThreshold;
+    private ProductStatus status;
+    private String imageUrl;
+    private String imageStorageKey;
+    private String barcode;
+    private String brand;
+    private BigDecimal quantityOnHand;
+    private BigDecimal averageCost;
+    private BigDecimal totalValuation;
+    private boolean isLowStock;
+    private List<ProductUnitConversionResponse> conversions;
+    private Instant createdAt;
+    private Instant updatedAt;
+}

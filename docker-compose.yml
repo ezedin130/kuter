@@ -1,0 +1,44 @@
+# ==============================================================================
+# Kuter - Multi-Tenant Inventory Management SaaS
+# Local Development Infrastructure
+# ==============================================================================
+# To start the local PostgreSQL service:
+#   docker compose up -d
+#
+# To verify health:
+#   docker compose ps
+#
+# To view database logs:
+#   docker compose logs -f postgres
+#
+# To stop services:
+#   docker compose down
+#
+# Note: For developers running native PostgreSQL on port 5432, you can adjust
+# the host port via DB_PORT in .env (e.g., DB_PORT=5433).
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: kuter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-kuter_dev}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - kuter_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-kuter_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  kuter_postgres_data:
+    name: kuter_postgres_data
