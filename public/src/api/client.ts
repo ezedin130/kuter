@@ -50,7 +50,10 @@ export class PublicApiClient {
         }
         throw error;
       }
-      throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
+      // Surface status code so callers can distinguish 403/404/500
+      const error = new Error(`Server returned HTTP ${response.status}: ${response.statusText}`) as Error & { status?: number };
+      error.status = response.status;
+      throw error;
     }
 
     if (json && 'data' in json) {
