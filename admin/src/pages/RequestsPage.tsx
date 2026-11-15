@@ -323,7 +323,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 </div>
 
                 <div className="data-kv-label">Operating Currency</div>
-                <div className="data-kv-value">{selectedRequest.currency || 'USD'}</div>
+                <div className="data-kv-value">{selectedRequest.currency || 'ETB'}</div>
               </div>
             </div>
 
@@ -363,7 +363,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             </div>
           </div>
 
-          {/* Right Sidebar: Plan & Audit Information */}
+          {/* Right Sidebar: Plan & Request History */}
           <div>
             <div className="card" style={{ marginBottom: '20px' }}>
               <div className="detail-card-head">
@@ -401,7 +401,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
               <div className="card">
                 <div className="detail-card-head">
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={16} style={{ color: 'var(--muted)' }} /> Review Audit Record
+                    <Calendar size={16} style={{ color: 'var(--muted)' }} /> Application Timeline
                   </h3>
                 </div>
                 <div className="data-kv-grid" style={{ gridTemplateColumns: '100px 1fr' }}>
@@ -467,7 +467,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
 
             <div className="form-group">
               <label className="form-label" htmlFor="reviewer-notes">
-                Approval Notes (Internal Audit Log)
+                Approval Notes (Internal Notes)
               </label>
               <textarea
                 id="reviewer-notes"
@@ -526,7 +526,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
               <div>
                 <strong>Rejection Notice:</strong>
                 <br />
-                The application will be marked as REJECTED. The applicant will not receive tenant access, and this decision will be permanently recorded in the platform audit log.
+                The application will be marked as REJECTED. The applicant will not receive tenant access, and this decision will be permanently recorded in the system.
               </div>
             </div>
 
