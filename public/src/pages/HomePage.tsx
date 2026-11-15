@@ -35,7 +35,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
     publicApi
       .getPublicPlans()
       .then((data) => {
-        if (active) setPlans(data);
+        if (active) setPlans([...data].sort((a, b) => Number(a.price) - Number(b.price)));
       })
       .catch(() => {
         // Fallback plans if backend is unreachable during demo
@@ -46,8 +46,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               code: 'starter',
               name: 'Starter',
               description: 'Essential dual-unit inventory control for single yard building materials shops.',
-              price: 49,
-              currency: 'USD',
+              price: 2500,
+              currency: 'ETB',
               billingInterval: 'MONTHLY',
               productLimit: 500,
               userLimit: 3,
@@ -60,8 +60,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               code: 'growth',
               name: 'Growth',
               description: 'High-volume materials distribution, multiple warehouse locations, and advanced conversion rules.',
-              price: 119,
-              currency: 'USD',
+              price: 5500,
+              currency: 'ETB',
               billingInterval: 'MONTHLY',
               productLimit: 2500,
               userLimit: 10,
@@ -74,8 +74,8 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               code: 'enterprise',
               name: 'Enterprise',
               description: 'Custom limits, dedicated support, and enterprise audit capabilities.',
-              price: 279,
-              currency: 'USD',
+              price: 12000,
+              currency: 'ETB',
               billingInterval: 'MONTHLY',
               productLimit: 10000,
               userLimit: 50,
@@ -155,7 +155,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               <div className="preview-stats">
                 <div>
                   <small>Inventory value</small>
-                  <strong>$6,271.70</strong>
+                  <strong>Br 6,271.70</strong>
                   <span className="up">+4.8% this month</span>
                 </div>
                 <div>
@@ -337,7 +337,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
             [
               '01',
               'Request access',
-              'Tell us about your shop, currency, and choose your preferred tier.',
+              'Tell us about your shop and choose your preferred subscription tier.',
             ],
             [
               '02',
@@ -395,7 +395,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                   <p>{plan.description}</p>
                   <div className="price">
                     <small>from</small>
-                    <strong>${plan.price}</strong>
+                    <strong>Br {plan.price.toLocaleString()}</strong>
                     <span>/ {plan.billingInterval.toLowerCase()}</span>
                   </div>
                   <div className="limits">
