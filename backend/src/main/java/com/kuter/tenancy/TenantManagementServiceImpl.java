@@ -1,7 +1,8 @@
 package com.kuter.tenancy;
 
-import com.kuter.audit.AuditService;
+import com.kuter.common.BadRequestException;
 import com.kuter.common.ConflictException;
+import com.kuter.common.EthiopianPhoneNumberUtils;
 import com.kuter.common.PageResponse;
 import com.kuter.common.ResourceNotFoundException;
 import com.kuter.identity.KuterUserPrincipal;
@@ -51,7 +52,6 @@ public class TenantManagementServiceImpl implements TenantManagementService {
     private final TenantMembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuditService auditService;
     private final com.kuter.subscriptions.SubscriptionPlanRepository subscriptionPlanRepository;
     private final com.kuter.subscriptions.TenantSubscriptionRepository tenantSubscriptionRepository;
     private final com.kuter.onboarding.TenantOnboardingRequestRepository onboardingRequestRepository;
@@ -63,7 +63,6 @@ public class TenantManagementServiceImpl implements TenantManagementService {
                                        TenantMembershipRepository membershipRepository,
                                        UserRepository userRepository,
                                        PasswordEncoder passwordEncoder,
-                                       AuditService auditService,
                                        com.kuter.subscriptions.SubscriptionPlanRepository subscriptionPlanRepository,
                                        com.kuter.subscriptions.TenantSubscriptionRepository tenantSubscriptionRepository,
                                        com.kuter.onboarding.TenantOnboardingRequestRepository onboardingRequestRepository,
@@ -74,7 +73,6 @@ public class TenantManagementServiceImpl implements TenantManagementService {
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.auditService = auditService;
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantSubscriptionRepository = tenantSubscriptionRepository;
         this.onboardingRequestRepository = onboardingRequestRepository;
@@ -98,7 +96,7 @@ public class TenantManagementServiceImpl implements TenantManagementService {
                 .name(dto.getName().trim())
                 .code(code)
                 .businessRegistrationNumber(dto.getBusinessRegistrationNumber() != null ? dto.getBusinessRegistrationNumber().trim() : null)
-                .currency(StringUtils.hasText(dto.getCurrency()) ? dto.getCurrency().trim().toUpperCase() : "USD")
+                .currency("ETB")
                 .timezone(StringUtils.hasText(dto.getTimezone()) ? dto.getTimezone().trim() : "UTC")
                 .status(TenantStatus.ACTIVE)
                 .build();
@@ -116,10 +114,13 @@ public class TenantManagementServiceImpl implements TenantManagementService {
             String initialPassword = StringUtils.hasText(dto.getOwnerPassword())
                     ? dto.getOwnerPassword().trim()
                     : "Admin@123456";
+            String normalizedPhone = StringUtils.hasText(dto.getOwnerPhone())
+                    ? EthiopianPhoneNumberUtils.normalizeIfValid(dto.getOwnerPhone())
+                    : null;
             ownerUser = User.builder()
                     .email(ownerEmail)
                     .fullName(dto.getOwnerFullName().trim())
-                    .phoneNumber(dto.getOwnerPhone() != null ? dto.getOwnerPhone().trim() : null)
+                    .phoneNumber(normalizedPhone)
                     .passwordHash(passwordEncoder.encode(initialPassword))
                     .status(UserStatus.ACTIVE)
                     .isPlatformAdmin(false)
@@ -153,14 +154,6 @@ public class TenantManagementServiceImpl implements TenantManagementService {
                             .build();
                     tenantSubscriptionRepository.save(sub);
                 });
-
-        String ipAddress = extractClientIp(httpRequest);
-        UUID adminId = adminPrincipal != null ? adminPrincipal.getUserId() : null;
-        String adminEmail = adminPrincipal != null ? adminPrincipal.getEmail() : "system";
-
-        auditService.logEvent(tenant.getId(), adminId, adminEmail, "TENANT_CREATED",
-                "TENANT", tenant.getId().toString(),
-                "Direct tenant created: " + tenant.getCode() + ", owner: " + ownerEmail, ipAddress);
 
         log.info("Tenant created directly: id={}, code='{}', owner='{}'",
                 tenant.getId(), tenant.getCode(), ownerEmail);
@@ -211,22 +204,14 @@ public class TenantManagementServiceImpl implements TenantManagementService {
         if (dto.getBusinessRegistrationNumber() != null) {
             tenant.setBusinessRegistrationNumber(dto.getBusinessRegistrationNumber().trim());
         }
-        if (StringUtils.hasText(dto.getCurrency())) {
-            tenant.setCurrency(dto.getCurrency().trim().toUpperCase());
-        }
+        tenant.setCurrency("ETB");
         if (StringUtils.hasText(dto.getTimezone())) {
             tenant.setTimezone(dto.getTimezone().trim());
         }
 
         Tenant updated = tenantRepository.save(tenant);
 
-        String ipAddress = extractClientIp(httpRequest);
-        UUID adminId = adminPrincipal != null ? adminPrincipal.getUserId() : null;
-        String adminEmail = adminPrincipal != null ? adminPrincipal.getEmail() : "system";
-
-        auditService.logEvent(tenant.getId(), adminId, adminEmail, "TENANT_UPDATED",
-                "TENANT", tenant.getId().toString(),
-                "Admin updated tenant profile: " + tenant.getCode(), ipAddress);
+        log.info("[TENANT_UPDATED] tenantId={} code='{}'", tenant.getId(), tenant.getCode());
 
         int memberCount = membershipRepository.findAllByTenantId(id).size();
         return mapToDetail(updated, memberCount);
@@ -245,14 +230,8 @@ public class TenantManagementServiceImpl implements TenantManagementService {
         tenant.setStatus(dto.getStatus());
         Tenant updated = tenantRepository.save(tenant);
 
-        String ipAddress = extractClientIp(httpRequest);
-        UUID adminId = adminPrincipal != null ? adminPrincipal.getUserId() : null;
-        String adminEmail = adminPrincipal != null ? adminPrincipal.getEmail() : "system";
-
-        auditService.logEvent(tenant.getId(), adminId, adminEmail, "TENANT_STATUS_CHANGED",
-                "TENANT", tenant.getId().toString(),
-                "Changed status from " + oldStatus + " to " + dto.getStatus() + ". Reason: " + dto.getReason(),
-                ipAddress);
+        log.info("[TENANT_STATUS_CHANGED] tenantId={} from={} to={} reason='{}'",
+                tenant.getId(), oldStatus, dto.getStatus(), dto.getReason());
 
         int memberCount = membershipRepository.findAllByTenantId(id).size();
         return mapToDetail(updated, memberCount);
@@ -282,22 +261,14 @@ public class TenantManagementServiceImpl implements TenantManagementService {
         if (dto.getBusinessRegistrationNumber() != null) {
             tenant.setBusinessRegistrationNumber(dto.getBusinessRegistrationNumber().trim());
         }
-        if (StringUtils.hasText(dto.getCurrency())) {
-            tenant.setCurrency(dto.getCurrency().trim().toUpperCase());
-        }
+        tenant.setCurrency("ETB");
         if (StringUtils.hasText(dto.getTimezone())) {
             tenant.setTimezone(dto.getTimezone().trim());
         }
 
         Tenant updated = tenantRepository.save(tenant);
 
-        String ipAddress = extractClientIp(httpRequest);
-        UUID userId = principal != null ? principal.getUserId() : null;
-        String userEmail = principal != null ? principal.getEmail() : "system";
-
-        auditService.logEvent(tenant.getId(), userId, userEmail, "TENANT_SETTINGS_UPDATED",
-                "TENANT", tenant.getId().toString(),
-                "Shop owner updated shop settings for: " + tenant.getCode(), ipAddress);
+        log.info("[TENANT_SETTINGS_UPDATED] tenantId={} code='{}'", tenant.getId(), tenant.getCode());
 
         int memberCount = membershipRepository.findAllByTenantId(currentTenantId).size();
         return mapToDetail(updated, memberCount);
@@ -360,7 +331,7 @@ public class TenantManagementServiceImpl implements TenantManagementService {
                 .suspendedSubscriptions(suspendedSubs)
                 .cancelledSubscriptions(cancelledSubs)
                 .estimatedMonthlyRevenue(estimatedMrr)
-                .currency("USD")
+                .currency("ETB")
                 .generatedAt(Instant.now(clock))
                 .build();
     }
