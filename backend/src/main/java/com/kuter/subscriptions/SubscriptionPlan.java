@@ -42,7 +42,7 @@ public class SubscriptionPlan extends BaseEntity {
 
     @Column(name = "currency", nullable = false, length = 10)
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "ETB";
 
     @Enumerated(EnumType.STRING)
     @Column(name = "billing_interval", nullable = false, length = 20)
