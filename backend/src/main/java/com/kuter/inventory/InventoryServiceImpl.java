@@ -1,6 +1,5 @@
 package com.kuter.inventory;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.Category;
 import com.kuter.catalog.CategoryRepository;
 import com.kuter.catalog.Product;
@@ -24,6 +23,7 @@ import com.kuter.inventory.dto.CurrentInventoryItemDto;
 import com.kuter.inventory.dto.InventoryValuationReport;
 import com.kuter.inventory.dto.ProductUnitConversionInfo;
 import jakarta.persistence.criteria.Predicate;
+import java.util.Collections;
 import org.springframework.data.jpa.domain.Specification;
 import com.kuter.inventory.dto.StockAdjustmentItemResponse;
 import com.kuter.inventory.dto.StockAdjustmentResponse;
@@ -73,7 +73,6 @@ public class InventoryServiceImpl implements InventoryService {
     private final StockAdjustmentItemRepository adjustmentItemRepository;
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
-    private final AuditService auditService;
 
     public InventoryServiceImpl(ProductRepository productRepository,
                                 CategoryRepository categoryRepository,
@@ -86,8 +85,7 @@ public class InventoryServiceImpl implements InventoryService {
                                 StockAdjustmentRepository adjustmentRepository,
                                 StockAdjustmentItemRepository adjustmentItemRepository,
                                 TenantRepository tenantRepository,
-                                UserRepository userRepository,
-                                AuditService auditService) {
+                                UserRepository userRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.unitRepository = unitRepository;
@@ -100,7 +98,6 @@ public class InventoryServiceImpl implements InventoryService {
         this.adjustmentItemRepository = adjustmentItemRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
-        this.auditService = auditService;
     }
 
     @Override
@@ -169,7 +166,9 @@ public class InventoryServiceImpl implements InventoryService {
             BigDecimal unitCostInReceivedUnit = itemDto.getUnitCost().setScale(4, RoundingMode.HALF_UP);
             BigDecimal baseQuantity = receivedQty.multiply(conversionFactor).setScale(4, RoundingMode.HALF_UP);
             BigDecimal lineTotalCost = receivedQty.multiply(unitCostInReceivedUnit).setScale(4, RoundingMode.HALF_UP);
-            BigDecimal baseUnitCost = lineTotalCost.divide(baseQuantity, 4, RoundingMode.HALF_UP);
+            BigDecimal baseUnitCost = baseQuantity.compareTo(BigDecimal.ZERO) > 0
+                    ? lineTotalCost.divide(baseQuantity, 4, RoundingMode.HALF_UP)
+                    : unitCostInReceivedUnit;
 
             totalReceiptCost = totalReceiptCost.add(lineTotalCost);
 
@@ -180,34 +179,36 @@ public class InventoryServiceImpl implements InventoryService {
                         StockBalance sb = StockBalance.builder()
                                 .tenantId(tenantId)
                                 .productId(product.getId())
-                                .quantityOnHand(BigDecimal.ZERO)
-                                .averageCost(product.getCostPrice())
+                                .quantityOnHand(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
+                                .averageCost(product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                                 .build();
                         return balanceRepository.save(sb);
                     });
 
-            BigDecimal existingQty = balance.getQuantityOnHand();
-            BigDecimal existingAvgCost = balance.getAverageCost();
+            BigDecimal existingQty = balance.getQuantityOnHand() != null ? balance.getQuantityOnHand() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
+            BigDecimal existingAvgCost = balance.getAverageCost() != null ? balance.getAverageCost() :
+                    (product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP));
 
             // Calculate Moving Weighted-Average Cost
+            // New Average Cost = (Existing Stock Value + New Purchase Value) / New Total Stock Quantity
+            BigDecimal newQuantityOnHand = existingQty.add(baseQuantity).setScale(4, RoundingMode.HALF_UP);
             BigDecimal newAverageCost;
             if (existingQty.compareTo(BigDecimal.ZERO) <= 0) {
+                newAverageCost = baseUnitCost;
+            } else if (newQuantityOnHand.compareTo(BigDecimal.ZERO) <= 0) {
                 newAverageCost = baseUnitCost;
             } else {
                 BigDecimal existingValuation = existingQty.multiply(existingAvgCost);
                 BigDecimal combinedValuation = existingValuation.add(lineTotalCost);
-                BigDecimal newTotalQuantity = existingQty.add(baseQuantity);
-                newAverageCost = combinedValuation.divide(newTotalQuantity, 4, RoundingMode.HALF_UP);
+                newAverageCost = combinedValuation.divide(newQuantityOnHand, 4, RoundingMode.HALF_UP);
             }
-
-            BigDecimal newQuantityOnHand = existingQty.add(baseQuantity);
 
             // Update balance
             balance.setQuantityOnHand(newQuantityOnHand);
             balance.setAverageCost(newAverageCost);
             balanceRepository.save(balance);
 
-            // Update product's cost price to reflect current weighted average cost
+            // Update product's cost price to reflect current weighted average cost immediately
             product.setCostPrice(newAverageCost);
             productRepository.save(product);
 
@@ -328,13 +329,21 @@ public class InventoryServiceImpl implements InventoryService {
             }
         }
 
+        if (!StringUtils.hasText(dto.getReasonCode())) {
+            throw new BadRequestException("Adjustment reason code must be explicitly selected.");
+        }
+        String cleanReason = dto.getReasonCode().trim().toUpperCase();
+        if ("OTHER".equals(cleanReason) && !StringUtils.hasText(dto.getNotes())) {
+            throw new BadRequestException("Please provide an explanation in notes when reason is 'OTHER'.");
+        }
+
         String adjustmentNumber = generateAdjustmentNumber(tenantId);
         UUID actorId = principal != null ? principal.getUserId() : null;
 
         StockAdjustment adjustment = StockAdjustment.builder()
                 .tenantId(tenantId)
                 .adjustmentNumber(adjustmentNumber)
-                .reasonCode(dto.getReasonCode().trim().toUpperCase())
+                .reasonCode(cleanReason)
                 .notes(StringUtils.hasText(dto.getNotes()) ? dto.getNotes().trim() : null)
                 .idempotencyKey(StringUtils.hasText(dto.getIdempotencyKey()) ? dto.getIdempotencyKey().trim() : null)
                 .status("COMPLETED")
@@ -348,6 +357,18 @@ public class InventoryServiceImpl implements InventoryService {
             Product product = productRepository.findByTenantIdAndId(tenantId, itemDto.getProductId())
                     .orElseThrow(() -> new BadRequestException("Product not found with ID: " + itemDto.getProductId()));
 
+            UnitDefinition baseUnit = unitRepository.findByTenantIdAndId(tenantId, product.getBaseUnitId()).orElse(null);
+            UUID selectedUnitId = itemDto.getUnitId() != null ? itemDto.getUnitId() : product.getBaseUnitId();
+            UnitDefinition selectedUnit = selectedUnitId.equals(product.getBaseUnitId()) ? baseUnit :
+                    unitRepository.findByTenantIdAndId(tenantId, selectedUnitId).orElse(baseUnit);
+
+            BigDecimal conversionFactor = BigDecimal.ONE.setScale(4, RoundingMode.HALF_UP);
+            if (selectedUnit != null && !selectedUnit.getId().equals(product.getBaseUnitId())) {
+                conversionFactor = conversionRepository.findByTenantIdAndProductIdAndUnitId(tenantId, product.getId(), selectedUnit.getId())
+                        .map(ProductUnitConversion::getConversionFactor)
+                        .orElse(BigDecimal.ONE).setScale(4, RoundingMode.HALF_UP);
+            }
+
             // Pessimistic Write Lock on balance
             StockBalance balance = balanceRepository
                     .findByTenantIdAndProductIdForUpdate(tenantId, product.getId())
@@ -355,25 +376,34 @@ public class InventoryServiceImpl implements InventoryService {
                         StockBalance sb = StockBalance.builder()
                                 .tenantId(tenantId)
                                 .productId(product.getId())
-                                .quantityOnHand(BigDecimal.ZERO)
-                                .averageCost(product.getCostPrice())
+                                .quantityOnHand(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
+                                .averageCost(product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                                 .build();
                         return balanceRepository.save(sb);
                     });
 
-            BigDecimal currentOnHand = balance.getQuantityOnHand();
+            BigDecimal currentOnHand = balance.getQuantityOnHand() != null ? balance.getQuantityOnHand() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
             BigDecimal quantityChange;
+            BigDecimal enteredQuantity = itemDto.getEnteredQuantity();
 
             if (itemDto.getTargetQuantity() != null) {
                 // Physical audit count mode: quantityChange = target - current
                 quantityChange = itemDto.getTargetQuantity().subtract(currentOnHand).setScale(4, RoundingMode.HALF_UP);
+                if (enteredQuantity == null) {
+                    enteredQuantity = quantityChange.abs();
+                }
             } else if (itemDto.getQuantityChange() != null) {
                 quantityChange = itemDto.getQuantityChange().setScale(4, RoundingMode.HALF_UP);
+                if (enteredQuantity == null) {
+                    enteredQuantity = quantityChange.abs();
+                }
+            } else if (enteredQuantity != null) {
+                quantityChange = enteredQuantity.multiply(conversionFactor).setScale(4, RoundingMode.HALF_UP);
             } else {
-                throw new BadRequestException("Either quantityChange or targetQuantity must be provided for SKU " + product.getSku());
+                throw new BadRequestException("Either quantityChange, enteredQuantity, or targetQuantity must be provided for SKU " + product.getSku());
             }
 
-            BigDecimal newOnHand = currentOnHand.add(quantityChange);
+            BigDecimal newOnHand = currentOnHand.add(quantityChange).setScale(4, RoundingMode.HALF_UP);
 
             // Enforce negative stock prevention: reject adjustments that reduce balance below zero
             if (newOnHand.compareTo(BigDecimal.ZERO) < 0) {
@@ -382,13 +412,25 @@ public class InventoryServiceImpl implements InventoryService {
                         ". Current on-hand is: " + currentOnHand);
             }
 
+            String adjustmentType = quantityChange.compareTo(BigDecimal.ZERO) >= 0 ? "INCREASE" : "DECREASE";
+
             // Costing treatment:
             // Downward adjustments (loss, damage) preserve average cost; valuation decreases by |change| * avgCost.
             // Upward adjustments (found stock) use supplied cost or current average cost.
-            BigDecimal unitCost = balance.getAverageCost();
+            BigDecimal unitCost = balance.getAverageCost() != null ? balance.getAverageCost() :
+                    (product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP));
+
             if (quantityChange.compareTo(BigDecimal.ZERO) > 0 && itemDto.getUnitCost() != null) {
-                unitCost = itemDto.getUnitCost().setScale(4, RoundingMode.HALF_UP);
+                BigDecimal suppliedCost = itemDto.getUnitCost().setScale(4, RoundingMode.HALF_UP);
                 if (currentOnHand.compareTo(BigDecimal.ZERO) <= 0) {
+                    unitCost = suppliedCost;
+                    balance.setAverageCost(unitCost);
+                    product.setCostPrice(unitCost);
+                    productRepository.save(product);
+                } else if (newOnHand.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal existingValuation = currentOnHand.multiply(unitCost);
+                    BigDecimal addedValuation = quantityChange.multiply(suppliedCost);
+                    unitCost = existingValuation.add(addedValuation).divide(newOnHand, 4, RoundingMode.HALF_UP);
                     balance.setAverageCost(unitCost);
                     product.setCostPrice(unitCost);
                     productRepository.save(product);
@@ -403,13 +445,21 @@ public class InventoryServiceImpl implements InventoryService {
             }
             balanceRepository.save(balance);
 
-            // Record adjustment line
+            // Record adjustment line with complete permanent historical audit fields
             StockAdjustmentItem item = StockAdjustmentItem.builder()
                     .tenantId(tenantId)
                     .adjustmentId(savedAdjustment.getId())
                     .productId(product.getId())
                     .quantityChange(quantityChange)
                     .unitCost(unitCost)
+                    .adjustmentType(adjustmentType)
+                    .enteredQuantity(enteredQuantity != null ? enteredQuantity : quantityChange.abs())
+                    .unitId(selectedUnit != null ? selectedUnit.getId() : (baseUnit != null ? baseUnit.getId() : null))
+                    .unitCode(selectedUnit != null ? selectedUnit.getCode() : (baseUnit != null ? baseUnit.getCode() : "UNIT"))
+                    .conversionFactor(conversionFactor)
+                    .quantityBefore(currentOnHand)
+                    .quantityAfter(newOnHand)
+                    .valuationImpact(valuationImpact)
                     .build();
             adjustmentItemRepository.save(item);
 
@@ -423,7 +473,7 @@ public class InventoryServiceImpl implements InventoryService {
                     .quantityChange(quantityChange)
                     .balanceAfter(newOnHand)
                     .unitCost(unitCost)
-                    .notes("Adjustment (" + dto.getReasonCode() + "): " + (dto.getNotes() != null ? dto.getNotes() : ""))
+                    .notes("Stock Adjustment (" + dto.getReasonCode() + "): " + (dto.getNotes() != null ? dto.getNotes() : ""))
                     .actorId(actorId)
                     .build();
             movementRepository.save(movement);
@@ -438,6 +488,12 @@ public class InventoryServiceImpl implements InventoryService {
                     .newQuantity(newOnHand)
                     .unitCost(unitCost)
                     .totalValuationImpact(valuationImpact)
+                    .adjustmentType(adjustmentType)
+                    .enteredQuantity(item.getEnteredQuantity())
+                    .unitId(item.getUnitId())
+                    .unitCode(item.getUnitCode())
+                    .conversionFactor(conversionFactor)
+                    .baseUnitCode(baseUnit != null ? baseUnit.getCode() : item.getUnitCode())
                     .build());
         }
 
@@ -465,7 +521,28 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional(readOnly = true)
     public PageResponse<StockAdjustmentResponse> listAdjustments(Pageable pageable) {
         UUID tenantId = TenantContext.requireTenantId();
-        Page<StockAdjustment> page = adjustmentRepository.findAllByTenantIdOrderByCreatedAtDesc(tenantId, pageable);
+
+        Pageable safePageable = pageable;
+        if (pageable != null && pageable.getSort().isSorted()) {
+            List<org.springframework.data.domain.Sort.Order> safeOrders = pageable.getSort().stream()
+                    .map(order -> {
+                        if ("adjustedAt".equalsIgnoreCase(order.getProperty())) {
+                            return new org.springframework.data.domain.Sort.Order(order.getDirection(), "createdAt");
+                        }
+                        if ("adjustedByName".equalsIgnoreCase(order.getProperty())) {
+                            return new org.springframework.data.domain.Sort.Order(order.getDirection(), "createdBy");
+                        }
+                        return order;
+                    })
+                    .toList();
+            safePageable = org.springframework.data.domain.PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    org.springframework.data.domain.Sort.by(safeOrders)
+            );
+        }
+
+        Page<StockAdjustment> page = adjustmentRepository.findAllByTenantIdOrderByCreatedAtDesc(tenantId, safePageable);
 
         Map<UUID, String> userNames = userRepository.findAll().stream()
                 .collect(Collectors.toMap(User::getId, User::getFullName, (a, b) -> a));
@@ -499,8 +576,6 @@ public class InventoryServiceImpl implements InventoryService {
         UUID tenantId = TenantContext.requireTenantId();
         String cleanSearch = StringUtils.hasText(search) ? search.trim() : null;
 
-        Page<Product> productPage = productRepository.searchProducts(tenantId, categoryId, null, cleanSearch, pageable);
-
         Map<UUID, String> categoryNames = categoryRepository.findAllByTenantId(tenantId).stream()
                 .collect(Collectors.toMap(Category::getId, Category::getName, (a, b) -> a));
         Map<UUID, UnitDefinition> units = unitRepository.findAllByTenantId(tenantId).stream()
@@ -508,16 +583,64 @@ public class InventoryServiceImpl implements InventoryService {
         Map<UUID, StockBalance> balances = balanceRepository.findAllByTenantId(tenantId).stream()
                 .collect(Collectors.toMap(StockBalance::getProductId, b -> b, (a, b) -> a));
 
+        if (Boolean.TRUE.equals(lowStockOnly)) {
+            List<Product> allProducts = (categoryId != null || cleanSearch != null)
+                    ? productRepository.searchProducts(tenantId, categoryId, null, cleanSearch, Pageable.unpaged()).getContent()
+                    : productRepository.findAllByTenantId(tenantId);
+
+            List<StockBalanceResponse> allLowStock = allProducts.stream()
+                    .map(p -> {
+                        StockBalance b = balances.get(p.getId());
+                        UnitDefinition u = units.get(p.getBaseUnitId());
+                        String catName = p.getCategoryId() != null ? categoryNames.get(p.getCategoryId()) : null;
+
+                        BigDecimal qty = b != null && b.getQuantityOnHand() != null ? b.getQuantityOnHand() : BigDecimal.ZERO;
+                        BigDecimal avgCost = b != null && b.getAverageCost() != null ? b.getAverageCost() : (p.getCostPrice() != null ? p.getCostPrice() : BigDecimal.ZERO);
+                        BigDecimal totalVal = qty.multiply(avgCost).setScale(4, RoundingMode.HALF_UP);
+                        BigDecimal threshold = p.getReorderThreshold() != null ? p.getReorderThreshold() : BigDecimal.ZERO;
+                        boolean isLow = qty.compareTo(threshold) <= 0;
+
+                        return StockBalanceResponse.builder()
+                                .productId(p.getId())
+                                .productSku(p.getSku())
+                                .productName(p.getName())
+                                .categoryId(p.getCategoryId())
+                                .categoryName(catName)
+                                .baseUnitId(p.getBaseUnitId())
+                                .baseUnitCode(u != null ? u.getCode() : null)
+                                .baseUnitName(u != null ? u.getName() : null)
+                                .quantityOnHand(qty)
+                                .averageCost(avgCost)
+                                .totalValuation(totalVal)
+                                .reorderThreshold(threshold)
+                                .isLowStock(isLow)
+                                .lastCountedAt(b != null ? b.getLastCountedAt() : null)
+                                .updatedAt(b != null ? b.getUpdatedAt() : p.getUpdatedAt())
+                                .build();
+                    })
+                    .filter(StockBalanceResponse::isLowStock)
+                    .toList();
+
+            int start = (int) pageable.getOffset();
+            int end = Math.min((start + pageable.getPageSize()), allLowStock.size());
+            List<StockBalanceResponse> pagedLowStock = start < allLowStock.size() ? allLowStock.subList(start, end) : Collections.emptyList();
+            Page<StockBalanceResponse> pagedResult = new org.springframework.data.domain.PageImpl<>(pagedLowStock, pageable, allLowStock.size());
+            return PageResponse.of(pagedResult);
+        }
+
+        Page<Product> productPage = productRepository.searchProducts(tenantId, categoryId, null, cleanSearch, pageable);
+
         List<StockBalanceResponse> list = productPage.getContent().stream()
                 .map(p -> {
                     StockBalance b = balances.get(p.getId());
                     UnitDefinition u = units.get(p.getBaseUnitId());
                     String catName = p.getCategoryId() != null ? categoryNames.get(p.getCategoryId()) : null;
 
-                    BigDecimal qty = b != null ? b.getQuantityOnHand() : BigDecimal.ZERO;
-                    BigDecimal avgCost = b != null ? b.getAverageCost() : p.getCostPrice();
+                    BigDecimal qty = b != null && b.getQuantityOnHand() != null ? b.getQuantityOnHand() : BigDecimal.ZERO;
+                    BigDecimal avgCost = b != null && b.getAverageCost() != null ? b.getAverageCost() : (p.getCostPrice() != null ? p.getCostPrice() : BigDecimal.ZERO);
                     BigDecimal totalVal = qty.multiply(avgCost).setScale(4, RoundingMode.HALF_UP);
-                    boolean isLow = qty.compareTo(p.getReorderThreshold()) <= 0;
+                    BigDecimal threshold = p.getReorderThreshold() != null ? p.getReorderThreshold() : BigDecimal.ZERO;
+                    boolean isLow = qty.compareTo(threshold) <= 0;
 
                     return StockBalanceResponse.builder()
                             .productId(p.getId())
@@ -531,17 +654,11 @@ public class InventoryServiceImpl implements InventoryService {
                             .quantityOnHand(qty)
                             .averageCost(avgCost)
                             .totalValuation(totalVal)
-                            .reorderThreshold(p.getReorderThreshold())
+                            .reorderThreshold(threshold)
                             .isLowStock(isLow)
                             .lastCountedAt(b != null ? b.getLastCountedAt() : null)
                             .updatedAt(b != null ? b.getUpdatedAt() : p.getUpdatedAt())
                             .build();
-                })
-                .filter(resp -> {
-                    if (Boolean.TRUE.equals(lowStockOnly)) {
-                        return resp.isLowStock();
-                    }
-                    return true;
                 })
                 .toList();
 
@@ -674,7 +791,7 @@ public class InventoryServiceImpl implements InventoryService {
     public InventoryValuationReport getValuationReport() {
         UUID tenantId = TenantContext.requireTenantId();
         Tenant tenant = tenantRepository.findById(tenantId).orElse(null);
-        String currency = tenant != null && StringUtils.hasText(tenant.getCurrency()) ? tenant.getCurrency() : "USD";
+        String currency = tenant != null && StringUtils.hasText(tenant.getCurrency()) ? tenant.getCurrency() : "ETB";
 
         List<Product> products = productRepository.findAllByTenantId(tenantId);
         List<StockBalance> balances = balanceRepository.findAllByTenantId(tenantId);
@@ -947,22 +1064,46 @@ public class InventoryServiceImpl implements InventoryService {
         Map<UUID, Product> products = productRepository.findAllByTenantId(adj.getTenantId()).stream()
                 .collect(Collectors.toMap(Product::getId, p -> p, (a, b) -> a));
 
+        Map<UUID, UnitDefinition> units = unitRepository.findAllByTenantId(adj.getTenantId()).stream()
+                .collect(Collectors.toMap(UnitDefinition::getId, u -> u, (a, b) -> a));
+
         List<StockAdjustmentItemResponse> itemResponses = items.stream()
                 .map(item -> {
-                    Product p = products.get(item.getProductId());
-                    BigDecimal valImpact = item.getQuantityChange().multiply(item.getUnitCost()).setScale(4, RoundingMode.HALF_UP);
-                    return StockAdjustmentItemResponse.builder()
-                            .id(item.getId())
-                            .productId(item.getProductId())
-                            .productSku(p != null ? p.getSku() : null)
-                            .productName(p != null ? p.getName() : null)
-                            .quantityChange(item.getQuantityChange())
-                            .previousQuantity(BigDecimal.ZERO) // not stored on line item
-                            .newQuantity(BigDecimal.ZERO)
-                            .unitCost(item.getUnitCost())
-                            .totalValuationImpact(valImpact)
-                            .build();
-                })
+            Product p = products.get(item.getProductId());
+            UnitDefinition baseUom = p != null && p.getBaseUnitId() != null ? units.get(p.getBaseUnitId()) : null;
+            String baseUnitCode = baseUom != null ? baseUom.getCode() : item.getUnitCode();
+
+            BigDecimal valImpact = item.getValuationImpact() != null ? item.getValuationImpact() :
+                    item.getQuantityChange().multiply(item.getUnitCost()).setScale(4, RoundingMode.HALF_UP);
+
+            BigDecimal qtyBefore = item.getQuantityBefore() != null ? item.getQuantityBefore() : BigDecimal.ZERO;
+            BigDecimal qtyAfter = item.getQuantityAfter() != null ? item.getQuantityAfter() :
+                    qtyBefore.add(item.getQuantityChange()).setScale(4, RoundingMode.HALF_UP);
+
+            String adjType = item.getAdjustmentType() != null ? item.getAdjustmentType() :
+                    (item.getQuantityChange().compareTo(BigDecimal.ZERO) >= 0 ? "INCREASE" : "DECREASE");
+
+            BigDecimal enteredQty = item.getEnteredQuantity() != null ? item.getEnteredQuantity() : item.getQuantityChange().abs();
+            BigDecimal convFactor = item.getConversionFactor() != null ? item.getConversionFactor() : BigDecimal.ONE;
+
+            return StockAdjustmentItemResponse.builder()
+                    .id(item.getId())
+                    .productId(item.getProductId())
+                    .productSku(p != null ? p.getSku() : null)
+                    .productName(p != null ? p.getName() : null)
+                    .quantityChange(item.getQuantityChange())
+                    .previousQuantity(qtyBefore)
+                    .newQuantity(qtyAfter)
+                    .unitCost(item.getUnitCost())
+                    .totalValuationImpact(valImpact)
+                    .adjustmentType(adjType)
+                    .enteredQuantity(enteredQty)
+                    .unitId(item.getUnitId())
+                    .unitCode(item.getUnitCode() != null ? item.getUnitCode() : baseUnitCode)
+                    .conversionFactor(convFactor)
+                    .baseUnitCode(baseUnitCode)
+                    .build();
+        })
                 .toList();
 
         return StockAdjustmentResponse.builder()
@@ -991,12 +1132,6 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     private void logAudit(String action, UUID entityId, String details, KuterUserPrincipal principal, HttpServletRequest request) {
-        UUID tenantId = TenantContext.requireTenantId();
-        UUID actorId = principal != null ? principal.getUserId() : null;
-        String actorEmail = principal != null ? principal.getEmail() : "system";
-
-        String ip = request != null ? request.getRemoteAddr() : "127.0.0.1";
-        auditService.logEvent(tenantId, actorId, actorEmail, action, "INVENTORY",
-                entityId.toString(), details, ip);
+        log.info("[INVENTORY_OP] action={} entityId={} details={}", action, entityId, details);
     }
 }
