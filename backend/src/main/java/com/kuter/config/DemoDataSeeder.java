@@ -78,7 +78,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .email("admin@kuterplatform.com")
                     .passwordHash(passwordEncoder.encode("Admin@123456"))
                     .fullName("Platform Administrator")
-                    .phoneNumber("+1 555-010-0001")
+                    .phoneNumber("+251911010001")
                     .isPlatformAdmin(true)
                     .status(UserStatus.ACTIVE)
                     .build());
@@ -90,7 +90,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .email("operator@kuterplatform.com")
                     .passwordHash(passwordEncoder.encode("Admin@123456"))
                     .fullName("Platform Operator")
-                    .phoneNumber("+1 555-010-0002")
+                    .phoneNumber("+251911010002")
                     .isPlatformAdmin(true)
                     .status(UserStatus.ACTIVE)
                     .build());
@@ -105,7 +105,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .code("amoudi-materials")
                     .name("Al-Amoudi Building Materials")
                     .status(TenantStatus.ACTIVE)
-                    .currency("USD")
+                    .currency("ETB")
                     .timezone("UTC")
                     .build());
         });
@@ -117,7 +117,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .code("kuter-express")
                     .name("Kuter Express Hardware")
                     .status(TenantStatus.ACTIVE)
-                    .currency("USD")
+                    .currency("ETB")
                     .timezone("UTC")
                     .build());
         });
@@ -129,7 +129,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .code("redsea-timber")
                     .name("Red Sea Timber & Steel")
                     .status(TenantStatus.SUSPENDED)
-                    .currency("USD")
+                    .currency("ETB")
                     .timezone("UTC")
                     .build());
         });
@@ -141,7 +141,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .email("owner@amoudi.com")
                     .passwordHash(passwordEncoder.encode("Admin@123456"))
                     .fullName("Tariq Al-Amoudi")
-                    .phoneNumber("+1 555-020-0001")
+                    .phoneNumber("+251922020001")
                     .isPlatformAdmin(false)
                     .status(UserStatus.ACTIVE)
                     .build());
@@ -185,7 +185,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .requestedPlanCode("growth")
                     .preferredShopCode("nile-concrete")
                     .businessAddress("Port Road Yard 4, Industrial Zone")
-                    .currency("USD")
+                    .currency("ETB")
                     .status(OnboardingStatus.PENDING)
                     .applicantNotes("Wholesale distributor supplying structural aggregates, cement, and reinforcement steel.")
                     .build());
@@ -202,7 +202,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                     .requestedPlanCode("starter")
                     .preferredShopCode("apex-masonry")
                     .businessAddress("108 Commercial Way, Building B")
-                    .currency("USD")
+                    .currency("ETB")
                     .status(OnboardingStatus.PENDING)
                     .applicantNotes("Single location brick, paver, and mortar retailer.")
                     .build());
