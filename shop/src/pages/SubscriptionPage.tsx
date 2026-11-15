@@ -147,69 +147,85 @@ export const SubscriptionPage: React.FC = () => {
             <h2 className="card-title" style={{ marginBottom: '20px' }}>
               Capacity Quotas & Resource Consumption
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-              {/* Products Quota */}
-              <div
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  padding: '20px',
-                  background: '#fcfdfd',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Package size={20} color="var(--teal)" />
-                  <span style={{ fontWeight: 700, fontSize: '15px' }}>Catalog Products</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
-                  <span>Used: <strong>{sub.usage?.productCount || 0}</strong> products</span>
-                  <span>Limit: <strong>{sub.limits?.maxProducts}</strong> allowed</span>
-                </div>
-                <div style={{ height: '8px', background: '#e2e8e7', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      height: '100%',
-                      background: 'var(--teal)',
-                      width: `${Math.min(100, ((sub.usage?.productCount || 0) / (sub.limits?.maxProducts || 1)) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '8px' }}>
-                  {Math.max(0, (sub.limits?.maxProducts || 0) - (sub.usage?.productCount || 0))} product slots remaining
-                </div>
-              </div>
+            {(() => {
+              const productCount = sub.usage?.productCount ?? (sub as any).activeProductsCount ?? 0;
+              const productLimit = sub.limits?.maxProducts ?? (sub as any).productLimit ?? null;
+              const isProductUnlimited = productLimit == null;
+              const productPct = isProductUnlimited ? 0 : Math.min(100, (productCount / (productLimit || 1)) * 100);
 
-              {/* Staff Users Quota */}
-              <div
-                style={{
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  padding: '20px',
-                  background: '#fcfdfd',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <Users size={20} color="var(--blue)" />
-                  <span style={{ fontWeight: 700, fontSize: '15px' }}>Staff Accounts</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
-                  <span>Active: <strong>{sub.usage?.userCount || 1}</strong> users</span>
-                  <span>Limit: <strong>{sub.limits?.maxUsers}</strong> seats</span>
-                </div>
-                <div style={{ height: '8px', background: '#e2e8e7', borderRadius: '4px', overflow: 'hidden' }}>
+              const userCount = sub.usage?.userCount ?? (sub as any).activeUsersCount ?? 1;
+              const userLimit = sub.limits?.maxUsers ?? (sub as any).userLimit ?? null;
+              const isUserUnlimited = userLimit == null;
+              const userPct = isUserUnlimited ? 0 : Math.min(100, (userCount / (userLimit || 1)) * 100);
+
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+                  {/* Products Quota */}
                   <div
                     style={{
-                      height: '100%',
-                      background: 'var(--blue)',
-                      width: `${Math.min(100, ((sub.usage?.userCount || 1) / (sub.limits?.maxUsers || 1)) * 100)}%`,
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius)',
+                      padding: '20px',
+                      background: '#fcfdfd',
                     }}
-                  />
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <Package size={20} color="var(--teal)" />
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>Catalog Products</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
+                      <span>Used: <strong>{productCount}</strong> products</span>
+                      <span>Limit: <strong>{isProductUnlimited ? 'Unlimited' : productLimit}</strong> allowed</span>
+                    </div>
+                    <div style={{ height: '8px', background: '#e2e8e7', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          background: productPct >= 90 ? 'var(--red, #e53e3e)' : 'var(--teal)',
+                          width: `${isProductUnlimited ? 15 : productPct}%`,
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '8px' }}>
+                      {isProductUnlimited ? 'Unlimited catalog products allowed' : `${Math.max(0, productLimit - productCount)} product slots remaining`}
+                    </div>
+                  </div>
+
+                  {/* Staff Users Quota */}
+                  <div
+                    style={{
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius)',
+                      padding: '20px',
+                      background: '#fcfdfd',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                      <Users size={20} color="var(--blue)" />
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>Staff Accounts</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
+                      <span>Active: <strong>{userCount}</strong> users</span>
+                      <span>Limit: <strong>{isUserUnlimited ? 'Unlimited' : userLimit}</strong> seats</span>
+                    </div>
+                    <div style={{ height: '8px', background: '#e2e8e7', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          height: '100%',
+                          background: userPct >= 90 ? 'var(--red, #e53e3e)' : 'var(--blue)',
+                          width: `${isUserUnlimited ? 15 : userPct}%`,
+                          transition: 'width 0.3s ease',
+                        }}
+                      />
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '8px' }}>
+                      {isUserUnlimited ? 'Unlimited staff accounts allowed' : `${Math.max(0, userLimit - userCount)} user seats remaining`}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '8px' }}>
-                  {Math.max(0, (sub.limits?.maxUsers || 0) - (sub.usage?.userCount || 1))} user seats remaining
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
 
           {/* Entitlements Card */}
@@ -243,7 +259,7 @@ export const SubscriptionPage: React.FC = () => {
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '13.5px' }}>Immutable Movement Ledger</div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                    Tamper-proof audit logs for receipts, sales, voids, and shrinkage adjustments.
+                    Tamper-proof stock movement records for receipts, sales, voids, and shrinkage adjustments.
                   </div>
                 </div>
               </div>
