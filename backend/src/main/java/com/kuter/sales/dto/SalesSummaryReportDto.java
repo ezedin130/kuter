@@ -36,4 +36,19 @@ public class SalesSummaryReportDto {
     private BigDecimal voidedSalesAmount;
 
     private List<DailySalesSummaryDto> dailyBreakdowns;
+
+    public BigDecimal getTotalRevenue() {
+        return totalSalesAmount;
+    }
+
+    public BigDecimal getTotalCost() {
+        return totalCostOfGoodsSold;
+    }
+
+    public BigDecimal getAverageBasketValue() {
+        if (totalSalesCount <= 0 || totalSalesAmount == null) {
+            return BigDecimal.ZERO;
+        }
+        return totalSalesAmount.divide(BigDecimal.valueOf(totalSalesCount), 2, java.math.RoundingMode.HALF_UP);
+    }
 }
