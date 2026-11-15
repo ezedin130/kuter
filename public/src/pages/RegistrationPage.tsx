@@ -19,6 +19,33 @@ interface RegistrationPageProps {
   onNavigate: (page: PublicPage) => void;
 }
 
+export function normalizeEthiopianPhone(raw: string): { normalized: string; valid: boolean; error?: string } {
+  if (!raw || !raw.trim()) {
+    return { normalized: '', valid: true };
+  }
+  let cleaned = raw.trim().replace(/[\s\-\(\)\.]/g, '');
+  if (cleaned.startsWith('+')) {
+    cleaned = cleaned.substring(1);
+  }
+  if (cleaned.startsWith('251')) {
+    cleaned = cleaned.substring(3);
+  }
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.substring(1);
+  }
+  if (!/^[79]\d{8}$/.test(cleaned)) {
+    return {
+      normalized: '',
+      valid: false,
+      error: 'Invalid Ethiopian phone number. Must be 9 digits starting with 9 or 7 (e.g. 982112233)',
+    };
+  }
+  return {
+    normalized: `+251${cleaned}`,
+    valid: true,
+  };
+}
+
 export const RegistrationPage: React.FC<RegistrationPageProps> = ({
   initialPlan = 'growth',
   onNavigate,
@@ -34,13 +61,17 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
     shopName: '',
     preferredShopCode: '',
     businessAddress: '',
-    currency: 'USD',
+    currency: 'ETB',
     ownerFullName: '',
     ownerEmail: '',
     ownerPhone: '',
     requestedPlanCode: initialPlan,
     applicantNotes: '',
   });
+
+  const [phoneLocal, setPhoneLocal] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [consentTerms, setConsentTerms] = useState(true);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -52,6 +83,14 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
     } else if (formData.shopName.trim().length < 2) {
       errors.shopName = 'Shop name must be at least 2 characters';
     }
+
+    if (formData.preferredShopCode && formData.preferredShopCode.trim()) {
+      const code = formData.preferredShopCode.trim();
+      if (!/^[a-z0-9-]{3,20}$/.test(code)) {
+        errors.preferredShopCode = 'Shop code must be 3-20 characters using lowercase letters, numbers, and hyphens only.';
+      }
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -68,6 +107,23 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
       errors.ownerEmail = 'Work email address is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ownerEmail.trim())) {
       errors.ownerEmail = 'Please provide a valid email address';
+    }
+
+    if (phoneLocal.trim()) {
+      const phoneRes = normalizeEthiopianPhone(phoneLocal);
+      if (!phoneRes.valid) {
+        errors.ownerPhone = phoneRes.error || 'Invalid Ethiopian phone format';
+      }
+    }
+
+    if (!password) {
+      errors.password = 'Account password is required';
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    }
+
+    if (password !== confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
     }
 
     setFieldErrors(errors);
@@ -102,23 +158,58 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
     setSubmitting(true);
     setErrorBanner(null);
 
+    // Compute canonical normalized phone
+    let normalizedPhone: string | undefined = undefined;
+    if (phoneLocal.trim()) {
+      const phoneCheck = normalizeEthiopianPhone(phoneLocal);
+      if (!phoneCheck.valid) {
+        setFieldErrors((prev) => ({ ...prev, ownerPhone: phoneCheck.error || 'Invalid phone' }));
+        setSubmitting(false);
+        setStep(2);
+        return;
+      }
+      normalizedPhone = phoneCheck.normalized;
+    }
+
     try {
       const payload: CreateOnboardingRequestDto = {
         shopName: formData.shopName.trim(),
         ownerFullName: formData.ownerFullName.trim(),
         ownerEmail: formData.ownerEmail.trim().toLowerCase(),
-        ownerPhone: formData.ownerPhone?.trim() || undefined,
+        ownerPhone: normalizedPhone,
         requestedPlanCode: formData.requestedPlanCode,
         preferredShopCode: formData.preferredShopCode?.trim() || undefined,
         businessAddress: formData.businessAddress?.trim() || undefined,
-        currency: formData.currency || 'USD',
+        currency: 'ETB',
         applicantNotes: formData.applicantNotes?.trim() || undefined,
+        password: password.trim(),
       };
 
       const response = await publicApi.submitOnboardingRequest(payload);
       setSubmittedResponse(response);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to submit registration request';
+      if (err && typeof err === 'object' && 'fieldErrors' in err && (err as any).fieldErrors) {
+        const serverFieldErrors = (err as any).fieldErrors as Record<string, string>;
+        setFieldErrors(serverFieldErrors);
+        // If errors belong to step 1 or 2, take user there
+        if (serverFieldErrors.shopName || serverFieldErrors.preferredShopCode) {
+          setStep(1);
+        } else if (serverFieldErrors.ownerFullName || serverFieldErrors.ownerEmail || serverFieldErrors.ownerPhone || serverFieldErrors.password) {
+          setStep(2);
+        }
+      }
+      let msg = err instanceof Error ? err.message : 'Failed to submit registration request';
+      // Translate raw HTTP status codes into user-friendly messages
+      const status = (err as any)?.status as number | undefined;
+      if (msg.includes('403') || status === 403) {
+        msg = 'Registration is currently unavailable. This is a server configuration issue — please try again shortly or contact support.';
+      } else if (msg.includes('404') || status === 404) {
+        msg = 'The registration endpoint could not be reached. Please try again later.';
+      } else if (msg.includes('500') || status === 500 || (msg.includes('HTTP 5'))) {
+        msg = 'An unexpected server error occurred. Please try again shortly.';
+      } else if (msg.toLowerCase().includes('network') || msg.toLowerCase().includes('unable to connect') || msg.toLowerCase().includes('failed to fetch')) {
+        msg = 'Unable to reach the Kuter server. Please check your internet connection and try again.';
+      }
       setErrorBanner(msg);
     } finally {
       setSubmitting(false);
@@ -150,7 +241,8 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
           <h1>Your shop registration request has been submitted.</h1>
           <p>
             We have received your application for <strong>{submittedResponse.shopName}</strong>.
-            Our platform administration team reviews every request to ensure proper yard setup.
+            A confirmation email has been dispatched to <strong>{submittedResponse.ownerEmail}</strong>.
+            Our platform administration team reviews every request within 24 business hours.
             Keep your reference code safe to monitor progress.
           </p>
 
@@ -240,8 +332,8 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
           </div>
 
           {errorBanner && (
-            <div className="error-banner" role="alert">
-              <AlertCircle />
+            <div className="error-banner" role="alert" style={{ marginBottom: '20px' }}>
+              <AlertCircle size={20} />
               <div>{errorBanner}</div>
             </div>
           )}
@@ -252,7 +344,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
               <>
                 <h1>Shop information</h1>
                 <p className="form-intro">
-                  Tell us about the building materials business you want to manage with Kuter.
+                  Tell us about the building materials business you want to manage with Kuter. All shops operate in Ethiopian Birr (ETB).
                 </p>
                 <div className="field-grid">
                   <label className="field wide">
@@ -261,7 +353,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                     </span>
                     <input
                       type="text"
-                      placeholder="e.g. Northstar Building Supply & Timber"
+                      placeholder="e.g. Merkato Steel & Cement Supply"
                       value={formData.shopName}
                       onChange={(e) =>
                         setFormData({ ...formData, shopName: e.target.value })
@@ -273,11 +365,11 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                     )}
                   </label>
 
-                  <label className="field">
+                  <label className="field wide">
                     <span>Preferred shop identifier</span>
                     <input
                       type="text"
-                      placeholder="e.g. northstar-yard"
+                      placeholder="e.g. merkato-supply (3-20 characters)"
                       value={formData.preferredShopCode}
                       onChange={(e) =>
                         setFormData({
@@ -286,31 +378,19 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                         })
                       }
                     />
+                    {fieldErrors.preferredShopCode && (
+                      <span className="field-error">{fieldErrors.preferredShopCode}</span>
+                    )}
                     <small style={{ color: 'var(--muted)', fontSize: 11 }}>
-                      Used for shop URLs and portal access.
+                      Used for shop URLs and portal access. Letters, numbers, and hyphens only.
                     </small>
-                  </label>
-
-                  <label className="field">
-                    <span>Operating currency</span>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) =>
-                        setFormData({ ...formData, currency: e.target.value })
-                      }
-                    >
-                      <option value="USD">USD — US Dollar ($)</option>
-                      <option value="GHS">GHS — Ghanaian Cedi (₵)</option>
-                      <option value="NGN">NGN — Nigerian Naira (₦)</option>
-                      <option value="KES">KES — Kenyan Shilling (KSh)</option>
-                    </select>
                   </label>
 
                   <label className="field wide">
                     <span>Business / Yard address</span>
                     <input
                       type="text"
-                      placeholder="Street address, city, commercial industrial area"
+                      placeholder="Street address, sub-city, Addis Ababa / regional city"
                       value={formData.businessAddress}
                       onChange={(e) =>
                         setFormData({ ...formData, businessAddress: e.target.value })
@@ -341,7 +421,7 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                     </span>
                     <input
                       type="text"
-                      placeholder="e.g. Maya Okafor"
+                      placeholder="e.g. Abebe Bekele"
                       value={formData.ownerFullName}
                       onChange={(e) =>
                         setFormData({ ...formData, ownerFullName: e.target.value })
@@ -371,23 +451,85 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                   </label>
 
                   <label className="field wide">
-                    <span>Phone number (optional)</span>
+                    <span>Phone number (Ethiopia)</span>
+                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '6px' }}>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '0 12px',
+                          height: '42px',
+                          background: 'var(--bg-subtle, #f1f5f9)',
+                          border: '1px solid var(--border, #cbd5e1)',
+                          borderRight: 'none',
+                          borderTopLeftRadius: '6px',
+                          borderBottomLeftRadius: '6px',
+                          fontWeight: 700,
+                          color: 'var(--ink, #0f172a)',
+                          fontSize: '14px',
+                          userSelect: 'none',
+                        }}
+                      >
+                        +251
+                      </span>
+                      <input
+                        type="tel"
+                        style={{
+                          borderTopLeftRadius: 0,
+                          borderBottomLeftRadius: 0,
+                          flex: 1,
+                        }}
+                        placeholder="982112233"
+                        value={phoneLocal}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          val = val.replace(/^\+?251/, '');
+                          setPhoneLocal(val);
+                        }}
+                      />
+                    </div>
+                    {fieldErrors.ownerPhone && (
+                      <span className="field-error">{fieldErrors.ownerPhone}</span>
+                    )}
+                    <small style={{ color: 'var(--muted)', fontSize: 11, marginTop: '4px', display: 'block' }}>
+                      Supported formats: 982112233 or 098 211 2233. Canonical format: +2519XXXXXXXX.
+                    </small>
+                  </label>
+
+                  <label className="field wide">
+                    <span>
+                      Account master password <b>*</b>
+                    </span>
                     <input
-                      type="tel"
-                      placeholder="+1 (555) 0182 or international format"
-                      value={formData.ownerPhone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ownerPhone: e.target.value })
-                      }
+                      type="password"
+                      placeholder="Minimum 8 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
                     />
+                    {fieldErrors.password && (
+                      <span className="field-error">{fieldErrors.password}</span>
+                    )}
+                  </label>
+
+                  <label className="field wide">
+                    <span>
+                      Confirm account password <b>*</b>
+                    </span>
+                    <input
+                      type="password"
+                      placeholder="Re-enter password to confirm"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                    {fieldErrors.confirmPassword && (
+                      <span className="field-error">{fieldErrors.confirmPassword}</span>
+                    )}
                   </label>
 
                   <div className="info-banner wide">
                     <AlertCircle />
                     <span>
-                      <strong>No password is requested here.</strong> Kuter is review-based.
-                      Once approved, an encrypted invitation will be sent to this email to create
-                      your credentials securely.
+                      <strong>Secure Credentials:</strong> Your password will be used to log in to your shop workspace once your registration is approved.
                     </span>
                   </div>
                 </div>
@@ -421,9 +563,9 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                         setFormData({ ...formData, requestedPlanCode: e.target.value })
                       }
                     >
-                      <option value="starter">Starter — Up to 500 items, 3 staff seats ($49/mo)</option>
-                      <option value="growth">Growth — Up to 2,500 items, 10 staff seats ($119/mo)</option>
-                      <option value="enterprise">Enterprise — Up to 10,000 items, 50 staff seats ($279/mo)</option>
+                      <option value="starter">Starter — Up to 500 items, 3 staff seats (Br 2,500/mo)</option>
+                      <option value="growth">Growth — Up to 2,500 items, 10 staff seats (Br 5,500/mo)</option>
+                      <option value="enterprise">Enterprise — Up to 10,000 items, 50 staff seats (Br 12,000/mo)</option>
                     </select>
                   </label>
 
@@ -460,8 +602,8 @@ export const RegistrationPage: React.FC<RegistrationPageProps> = ({
                   <Button type="button" tone="secondary" onClick={() => setStep(2)}>
                     Back
                   </Button>
-                  <Button type="submit" loading={submitting}>
-                    Submit registration request <ArrowRight size={16} />
+                  <Button type="submit" loading={submitting} disabled={submitting}>
+                    {submitting ? 'Submitting Application...' : 'Submit registration request'} <ArrowRight size={16} />
                   </Button>
                 </div>
               </>
