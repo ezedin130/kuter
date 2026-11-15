@@ -1,8 +1,8 @@
 package com.kuter.identity;
 
-import com.kuter.audit.AuditService;
 import com.kuter.common.BadRequestException;
 import com.kuter.common.ConflictException;
+import com.kuter.common.EthiopianPhoneNumberUtils;
 import com.kuter.common.ForbiddenException;
 import com.kuter.common.ResourceNotFoundException;
 import com.kuter.identity.dto.AddMemberDto;
@@ -43,20 +43,17 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
     private final TenantMembershipRepository membershipRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuditService auditService;
     private final com.kuter.subscriptions.EntitlementService entitlementService;
 
     public TenantMembershipServiceImpl(TenantRepository tenantRepository,
                                        TenantMembershipRepository membershipRepository,
                                        UserRepository userRepository,
                                        PasswordEncoder passwordEncoder,
-                                       AuditService auditService,
                                        com.kuter.subscriptions.EntitlementService entitlementService) {
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.auditService = auditService;
         this.entitlementService = entitlementService;
     }
 
@@ -125,7 +122,7 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
             user = User.builder()
                     .email(email)
                     .fullName(dto.getFullName().trim())
-                    .phoneNumber(dto.getPhoneNumber() != null ? dto.getPhoneNumber().trim() : null)
+                    .phoneNumber(dto.getPhoneNumber() != null ? EthiopianPhoneNumberUtils.normalizeIfValid(dto.getPhoneNumber()) : null)
                     .passwordHash(passwordEncoder.encode(initialPassword))
                     .status(UserStatus.ACTIVE)
                     .isPlatformAdmin(false)
@@ -150,9 +147,8 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
         UUID actorId = principal != null ? principal.getUserId() : null;
         String actorEmail = principal != null ? principal.getEmail() : "system";
 
-        auditService.logEvent(tenantId, actorId, actorEmail, "MEMBERSHIP_CREATED",
-                "TENANT_MEMBERSHIP", membership.getId().toString(),
-                "Added user " + email + " with role " + dto.getRole(), ipAddress);
+        log.info("[MEMBERSHIP_CREATED] tenantId={} membershipId={} user='{}' role={}",
+                tenantId, membership.getId(), email, dto.getRole());
 
         return TenantMemberDetailResponse.builder()
                 .id(membership.getId())
@@ -223,9 +219,8 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
         UUID actorId = principal != null ? principal.getUserId() : null;
         String actorEmail = principal != null ? principal.getEmail() : "system";
 
-        auditService.logEvent(tenantId, actorId, actorEmail, "MEMBERSHIP_UPDATED",
-                "TENANT_MEMBERSHIP", member.getId().toString(),
-                "Updated member " + (user != null ? user.getEmail() : member.getUserId()) + " role to " + member.getRole(), ipAddress);
+        log.info("[MEMBERSHIP_UPDATED] tenantId={} membershipId={} role={}",
+                tenantId, member.getId(), member.getRole());
 
         return TenantMemberDetailResponse.builder()
                 .id(updated.getId())
@@ -278,9 +273,8 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
         UUID actorId = principal != null ? principal.getUserId() : null;
         String actorEmail = principal != null ? principal.getEmail() : "system";
 
-        auditService.logEvent(tenantId, actorId, actorEmail, "MEMBERSHIP_STATUS_CHANGED",
-                "TENANT_MEMBERSHIP", member.getId().toString(),
-                "Changed status to " + status + " for user " + (user != null ? user.getEmail() : member.getUserId()), ipAddress);
+        log.info("[MEMBERSHIP_STATUS_CHANGED] tenantId={} membershipId={} status={}",
+                tenantId, member.getId(), status);
 
         return TenantMemberDetailResponse.builder()
                 .id(updated.getId())
@@ -344,9 +338,8 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
         User newOwnerUser = userRepository.findById(targetMembership.getUserId()).orElse(null);
 
         String ipAddress = extractClientIp(httpRequest);
-        auditService.logEvent(tenantId, principal.getUserId(), principal.getEmail(), "TENANT_OWNERSHIP_TRANSFERRED",
-                "TENANT", tenantId.toString(),
-                "Ownership transferred from " + currentOwnerUser.getEmail() + " to " + (newOwnerUser != null ? newOwnerUser.getEmail() : targetMembership.getUserId()), ipAddress);
+        log.info("[TENANT_OWNERSHIP_TRANSFERRED] tenantId={} from='{}' to='{}'",
+                tenantId, currentOwnerUser.getEmail(), (newOwnerUser != null ? newOwnerUser.getEmail() : targetMembership.getUserId()));
 
         return TenantMemberDetailResponse.builder()
                 .id(updatedTarget.getId())
@@ -394,9 +387,7 @@ public class TenantMembershipServiceImpl implements TenantMembershipService {
         UUID actorId = principal != null ? principal.getUserId() : null;
         String actorEmail = principal != null ? principal.getEmail() : "system";
 
-        auditService.logEvent(tenantId, actorId, actorEmail, "MEMBERSHIP_DELETED",
-                "TENANT_MEMBERSHIP", memberId.toString(),
-                "Removed membership ID: " + memberId, ipAddress);
+        log.info("[MEMBERSHIP_DELETED] tenantId={} membershipId={}", tenantId, memberId);
     }
 
     private void validatePermissionsForRole(TenantRole role, Set<ShopPermission> permissions) {
