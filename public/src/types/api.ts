@@ -27,6 +27,7 @@ export interface CreateOnboardingRequestDto {
   businessAddress?: string;
   currency?: string;
   applicantNotes?: string;
+  password?: string;
 }
 
 export interface OnboardingPublicResponse {
