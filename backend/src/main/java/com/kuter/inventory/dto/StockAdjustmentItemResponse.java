@@ -24,11 +24,30 @@ public class StockAdjustmentItemResponse {
     private BigDecimal unitCost;
     private BigDecimal totalValuationImpact;
 
+    private String adjustmentType;
+    private BigDecimal enteredQuantity;
+    private UUID unitId;
+    private String unitCode;
+    private BigDecimal conversionFactor;
+    private String baseUnitCode;
+
     public BigDecimal getBalanceAfter() {
         return this.newQuantity;
     }
 
     public BigDecimal getQuantityDelta() {
         return this.quantityChange;
+    }
+
+    public BigDecimal getQuantityBefore() {
+        return this.previousQuantity != null ? this.previousQuantity : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getQuantityAfter() {
+        return this.newQuantity != null ? this.newQuantity : BigDecimal.ZERO;
+    }
+
+    public BigDecimal getFinancialValue() {
+        return this.totalValuationImpact != null ? this.totalValuationImpact : BigDecimal.ZERO;
     }
 }
