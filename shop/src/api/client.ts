@@ -448,7 +448,7 @@ export class ShopApiClient {
   }
 
   public async listStockAdjustments(page = 0, size = 20): Promise<ApiResponse<PageResponse<StockAdjustmentResponse>>> {
-    return this.request<PageResponse<StockAdjustmentResponse>>(`/inventory/adjustments?page=${page}&size=${size}&sort=adjustedAt,desc`);
+    return this.request<PageResponse<StockAdjustmentResponse>>(`/inventory/adjustments?page=${page}&size=${size}&sort=createdAt,desc`);
   }
 
   public async listStockMovements(params: {
@@ -478,8 +478,8 @@ export class ShopApiClient {
     return this.request<InventoryValuationReport>('/inventory/reports/valuation');
   }
 
-  public async getLowStockReport(): Promise<ApiResponse<StockBalanceResponse[]>> {
-    return this.request<StockBalanceResponse[]>('/inventory/reports/low-stock');
+  public async getLowStockReport(page = 0, size = 50): Promise<ApiResponse<PageResponse<StockBalanceResponse>>> {
+    return this.request<PageResponse<StockBalanceResponse>>(`/inventory/reports/low-stock?page=${page}&size=${size}`);
   }
 
   // ==========================================
