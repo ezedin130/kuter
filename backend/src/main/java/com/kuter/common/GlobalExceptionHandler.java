@@ -24,7 +24,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Centralized exception handler ensuring uniform error JSON responses.
@@ -38,8 +40,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex,
                                                                   HttpServletRequest request) {
         List<String> details = new ArrayList<>();
+        Map<String, String> fieldErrors = new HashMap<>();
         for (FieldError error : ex.getBindingResult().getFieldErrors()) {
             details.add(error.getField() + ": " + error.getDefaultMessage());
+            fieldErrors.put(error.getField(), error.getDefaultMessage());
         }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
@@ -49,6 +53,7 @@ public class GlobalExceptionHandler {
                 .path(request.getRequestURI())
                 .correlationId(getCorrelationId())
                 .details(details)
+                .fieldErrors(fieldErrors)
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
