@@ -235,8 +235,8 @@ export const SubscriptionsPage: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number, currency: string, interval: string) => {
-    return `${new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(price)} / ${interval.toLowerCase()}`;
+  const formatPrice = (price: number, _currency: string, interval: string) => {
+    return `Br ${Number(price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} / ${interval.toLowerCase()}`;
   };
 
   const columns: Column<AdminSubscriptionDetailDto>[] = [
@@ -263,6 +263,68 @@ export const SubscriptionsPage: React.FC = () => {
           </div>
         </div>
       ),
+    },
+    {
+      key: 'quotas',
+      header: 'Capacity Quotas & Resource Consumption',
+      render: (s) => {
+        const prodCount = s.activeProductsCount ?? s.usage?.productCount ?? 0;
+        const prodLimit = s.productLimit ?? s.limits?.maxProducts;
+        const userCount = s.activeUsersCount ?? s.usage?.userCount ?? 1;
+        const userLimit = s.userLimit ?? s.limits?.maxUsers;
+
+        const prodPercent = prodLimit ? Math.min(100, (prodCount / prodLimit) * 100) : 0;
+        const userPercent = userLimit ? Math.min(100, (userCount / userLimit) * 100) : 0;
+
+        const prodReached = prodLimit ? prodCount >= prodLimit : false;
+        const userReached = userLimit ? userCount >= userLimit : false;
+        const prodWarning = prodLimit ? prodPercent >= 80 && !prodReached : false;
+        const userWarning = userLimit ? userPercent >= 80 && !userReached : false;
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '190px' }}>
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
+                <span style={{ fontWeight: 600 }}>Products:</span>
+                <span>
+                  <strong>{prodCount}</strong> / {prodLimit ? `${prodLimit} used` : 'Unlimited'}
+                </span>
+              </div>
+              {prodLimit && (
+                <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      background: prodReached ? 'var(--danger)' : prodWarning ? 'var(--warning)' : 'var(--teal)',
+                      width: `${prodPercent}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
+                <span style={{ fontWeight: 600 }}>Staff Accounts:</span>
+                <span>
+                  <strong>{userCount}</strong> / {userLimit ? `${userLimit} used` : 'Unlimited'}
+                </span>
+              </div>
+              {userLimit && (
+                <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div
+                    style={{
+                      height: '100%',
+                      background: userReached ? 'var(--danger)' : userWarning ? 'var(--warning)' : 'var(--blue)',
+                      width: `${userPercent}%`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'status',
@@ -539,7 +601,7 @@ export const SubscriptionsPage: React.FC = () => {
               >
                 {availablePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.currency} {p.price}/{p.billingInterval.toLowerCase()})
+                    {p.name} (Br {p.price}/{p.billingInterval.toLowerCase()})
                   </option>
                 ))}
               </select>
@@ -621,7 +683,7 @@ export const SubscriptionsPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="extend-reason">
-                Reason for Extension (Mandatory Audit Log) <span className="required">*</span>
+                Reason for Extension (Mandatory Record) <span className="required">*</span>
               </label>
               <textarea
                 id="extend-reason"
@@ -675,7 +737,7 @@ export const SubscriptionsPage: React.FC = () => {
               >
                 {availablePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.currency} {p.price}/{p.billingInterval.toLowerCase()})
+                    {p.name} (Br {p.price}/{p.billingInterval.toLowerCase()})
                   </option>
                 ))}
               </select>
