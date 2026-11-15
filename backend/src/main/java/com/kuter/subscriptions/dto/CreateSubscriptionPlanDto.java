@@ -32,7 +32,7 @@ public class CreateSubscriptionPlanDto {
     private BigDecimal price;
 
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "ETB";
 
     @NotNull(message = "Billing interval is required")
     private BillingInterval billingInterval;
