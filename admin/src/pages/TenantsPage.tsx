@@ -39,7 +39,7 @@ export const TenantsPage: React.FC = () => {
   const [createForm, setCreateForm] = useState<CreateTenantDto>({
     name: '',
     code: '',
-    currency: 'USD',
+    currency: 'ETB',
     timezone: 'UTC',
     initialOwnerEmail: '',
     initialOwnerFullName: '',
@@ -120,7 +120,7 @@ export const TenantsPage: React.FC = () => {
       setCreateForm({
         name: '',
         code: '',
-        currency: 'USD',
+        currency: 'ETB',
         timezone: 'UTC',
         initialOwnerEmail: '',
         initialOwnerFullName: '',
@@ -212,7 +212,7 @@ export const TenantsPage: React.FC = () => {
         <div>
           <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{t.name}</div>
           <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-            Currency: {t.currency} · Zone: {t.timezone}
+            Code: {t.code}
           </div>
         </div>
       ),
@@ -470,7 +470,7 @@ export const TenantsPage: React.FC = () => {
                 >
                   {availablePlans.map((p) => (
                     <option key={p.id} value={p.code}>
-                      {p.name} ({p.currency} {p.price}/{p.billingInterval.toLowerCase()})
+                      {p.name} (Br {p.price}/{p.billingInterval.toLowerCase()})
                     </option>
                   ))}
                 </select>
@@ -484,8 +484,9 @@ export const TenantsPage: React.FC = () => {
                   id="tenant-currency"
                   type="text"
                   className="form-input"
-                  value={createForm.currency}
-                  onChange={(e) => setCreateForm((prev) => ({ ...prev, currency: e.target.value }))}
+                  value="ETB (Ethiopian Birr)"
+                  disabled
+                  readOnly
                 />
               </div>
             </div>
@@ -642,7 +643,7 @@ export const TenantsPage: React.FC = () => {
 
           <div className="form-group">
             <label className="form-label" htmlFor="status-reason">
-              Reason for Status Change (Audit Record)
+              Reason for Status Change
             </label>
             <textarea
               id="status-reason"
