@@ -38,4 +38,28 @@ public class StockAdjustmentItem extends TenantAwareBaseEntity {
 
     @Column(name = "unit_cost", nullable = false, precision = 15, scale = 4)
     private BigDecimal unitCost;
+
+    @Column(name = "adjustment_type", length = 20)
+    private String adjustmentType;
+
+    @Column(name = "entered_quantity", precision = 15, scale = 4)
+    private BigDecimal enteredQuantity;
+
+    @Column(name = "unit_id")
+    private UUID unitId;
+
+    @Column(name = "unit_code", length = 50)
+    private String unitCode;
+
+    @Column(name = "conversion_factor", precision = 15, scale = 4)
+    private BigDecimal conversionFactor;
+
+    @Column(name = "quantity_before", nullable = false, precision = 15, scale = 4)
+    private BigDecimal quantityBefore;
+
+    @Column(name = "quantity_after", nullable = false, precision = 15, scale = 4)
+    private BigDecimal quantityAfter;
+
+    @Column(name = "valuation_impact", nullable = false, precision = 15, scale = 4)
+    private BigDecimal valuationImpact;
 }
