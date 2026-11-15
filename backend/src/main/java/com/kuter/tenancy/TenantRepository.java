@@ -26,6 +26,10 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
     boolean existsByCode(String code);
 
+    boolean existsByNameIgnoreCase(String name);
+
+    boolean existsByCodeIgnoreCase(String code);
+
     long countByStatus(TenantStatus status);
 
     Page<Tenant> findAllByStatus(TenantStatus status, Pageable pageable);
