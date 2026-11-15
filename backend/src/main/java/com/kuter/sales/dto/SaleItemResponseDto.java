@@ -33,4 +33,24 @@ public class SaleItemResponseDto {
     private BigDecimal unitCost;
     private BigDecimal totalCost;
     private BigDecimal grossProfit;
+
+    public String getUnitCode() {
+        return soldUnitCode;
+    }
+
+    public BigDecimal getQuantity() {
+        return soldQuantity;
+    }
+
+    public BigDecimal getToBaseFactor() {
+        return conversionFactor;
+    }
+
+    public BigDecimal getLineTotal() {
+        return totalPrice;
+    }
+
+    public BigDecimal getCostPriceSnapshot() {
+        return unitCost;
+    }
 }
