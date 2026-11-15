@@ -55,19 +55,35 @@ export const StockLedgerPage: React.FC = () => {
   };
 
   const formatCurrency = (val?: number) => {
-    if (val == null) return '—';
-    return Number(val).toLocaleString(undefined, {
+    if (val == null) return null;
+    return `Br ${Number(val).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
+    })}`;
+  };
+
+  const getMovementLabel = (type: string) => {
+    switch (type) {
+      case 'RECEIPT':
+      case 'PURCHASE_RECEIPT':
+        return 'Buying';
+      case 'SALE':
+        return 'Selling';
+      case 'ADJUSTMENT':
+        return 'Adjustment';
+      case 'RETURN':
+        return 'Return';
+      default:
+        return type;
+    }
   };
 
   return (
     <div>
       <PageHead
         eyebrow="Immutable Audit Trail"
-        title="Stock Movement Ledger"
-        subtitle="Complete chronological transaction log of all inbound receipts, sales stock deductions, and inventory adjustments"
+        title="Stock History"
+        subtitle="Complete chronological transaction log of all buying receipts, selling deductions, and stock adjustments"
         actions={
           <button
             type="button"
@@ -100,10 +116,10 @@ export const StockLedgerPage: React.FC = () => {
             value={movementType}
             onChange={(e) => setMovementType(e.target.value)}
           >
-            <option value="">All Movement Types</option>
-            <option value="RECEIPT">Inbound Receipts</option>
-            <option value="SALE">Outbound Sales</option>
-            <option value="ADJUSTMENT">Adjustments</option>
+            <option value="">All Movements</option>
+            <option value="RECEIPT">Buying (Receipts)</option>
+            <option value="SALE">Selling (Sales)</option>
+            <option value="ADJUSTMENT">Adjustment</option>
             <option value="RETURN">Sales Returns / Voids</option>
           </select>
 
@@ -118,10 +134,10 @@ export const StockLedgerPage: React.FC = () => {
               <tr>
                 <th>Timestamp</th>
                 <th>Product</th>
-                <th>Movement Type</th>
+                <th>Movement</th>
                 <th>Change</th>
                 <th>Balance After</th>
-                {!isCashier && <th style={{ textAlign: 'right' }}>Cost Snapshot</th>}
+                {!isCashier && <th style={{ textAlign: 'right' }}>Cost at Time of Transaction</th>}
                 <th>Reference</th>
                 <th>Actor</th>
               </tr>
@@ -130,7 +146,7 @@ export const StockLedgerPage: React.FC = () => {
               {isLoading ? (
                 <tr>
                   <td colSpan={isCashier ? 7 : 8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    Loading stock movements ledger...
+                    Loading stock history ledger...
                   </td>
                 </tr>
               ) : movements.length === 0 ? (
@@ -142,6 +158,7 @@ export const StockLedgerPage: React.FC = () => {
               ) : (
                 movements.map((m) => {
                   const isPositive = Number(m.quantityChange) > 0;
+                  const label = getMovementLabel(m.movementType);
                   return (
                     <tr key={m.id}>
                       <td style={{ fontSize: '12px', color: 'var(--muted)' }}>
@@ -157,11 +174,11 @@ export const StockLedgerPage: React.FC = () => {
                             m.movementType === 'RECEIPT' || m.movementType === 'RETURN'
                               ? 'badge-success'
                               : m.movementType === 'SALE'
-                              ? 'badge-neutral'
+                              ? 'badge-primary'
                               : 'badge-warning'
                           }`}
                         >
-                          {m.movementType}
+                          {label}
                         </span>
                       </td>
                       <td
@@ -177,7 +194,15 @@ export const StockLedgerPage: React.FC = () => {
                       </td>
                       {!isCashier && (
                         <td style={{ textAlign: 'right', color: 'var(--muted)' }}>
-                          {formatCurrency(m.unitCostSnapshot)}
+                          {(() => {
+                            const cost = m.unitCostSnapshot ?? m.unitCost ?? m.costAtTimeOfTransaction;
+                            const formatted = formatCurrency(cost);
+                            return formatted ? (
+                              <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatted}</span>
+                            ) : (
+                              <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '11.5px' }}>Not available</span>
+                            );
+                          })()}
                         </td>
                       )}
                       <td>
