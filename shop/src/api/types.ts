@@ -195,7 +195,9 @@ export interface ProductSummary {
   costPrice?: number; // Redacted for cashier
   reorderThreshold: number;
   currentStock: number;
+  quantityOnHand?: number;
   lowStock: boolean;
+  isLowStock?: boolean;
   status: ProductStatus;
   barcode?: string;
   brand?: string;
@@ -246,6 +248,7 @@ export interface UpdateProductDto {
 export interface StockBalanceResponse {
   productId: string;
   sku: string;
+  productSku?: string;
   productName: string;
   categoryId?: string;
   categoryName?: string;
@@ -271,7 +274,9 @@ export interface StockMovementResponse {
   movementType: MovementType;
   quantityChange: number;
   balanceAfter: number;
+  unitCost?: number;
   unitCostSnapshot?: number;
+  costAtTimeOfTransaction?: number;
   referenceType?: string;
   referenceId?: string;
   notes?: string;
@@ -307,6 +312,7 @@ export interface StockReceivingItemResponse {
   receivedQuantity: number;
   toBaseFactor: number;
   baseQuantity: number;
+  baseUnitCode?: string;
   unitCost: number;
   totalCost: number;
 }
@@ -330,6 +336,8 @@ export interface CreateStockAdjustmentItemDto {
   productId: string;
   quantityChange?: number;
   targetQuantity?: number;
+  unitId?: string;
+  enteredQuantity?: number;
   unitCost?: number;
 }
 
@@ -345,11 +353,19 @@ export interface StockAdjustmentItemResponse {
   productId: string;
   productSku: string;
   productName: string;
+  adjustmentType?: string;
+  enteredQuantity?: number;
+  unitId?: string;
+  unitCode?: string;
+  conversionFactor?: number;
+  baseQuantity?: number;
   baseUnitCode: string;
   quantityBefore: number;
   quantityChange: number;
   quantityAfter: number;
   unitCost?: number;
+  valuationImpact?: number;
+  financialValue?: number;
 }
 
 export interface StockAdjustmentResponse {
@@ -357,8 +373,10 @@ export interface StockAdjustmentResponse {
   adjustmentNumber: string;
   reasonCode: string;
   notes?: string;
-  adjustedAt: string;
-  adjustedByName: string;
+  createdAt?: string;
+  adjustedAt?: string;
+  createdByName?: string;
+  adjustedByName?: string;
   items: StockAdjustmentItemResponse[];
 }
 
@@ -388,15 +406,23 @@ export interface SaleItemResponseDto {
   productId: string;
   productSku: string;
   productName: string;
-  unitDefinitionId: string;
+  soldUnitId?: string;
+  unitDefinitionId?: string;
   unitCode: string;
+  soldUnitCode?: string;
   quantity: number;
-  toBaseFactor: number;
+  soldQuantity?: number;
+  toBaseFactor?: number;
+  conversionFactor?: number;
   baseQuantity: number;
   unitPrice: number;
   discountAmount: number;
   lineTotal: number;
+  totalPrice?: number;
   costPriceSnapshot?: number; // Redacted for cashier
+  unitCost?: number;
+  totalCost?: number;
+  grossProfit?: number;
 }
 
 export interface SaleResponseDto {
@@ -411,6 +437,9 @@ export interface SaleResponseDto {
   discountAmount: number;
   taxAmount: number;
   totalAmount: number;
+  totalRevenue?: number;
+  totalCost?: number;
+  grossProfit?: number;
   notes?: string;
   status: SaleStatus;
   voidReason?: string;
@@ -460,7 +489,9 @@ export interface VoidSaleRequestDto {
 // Operational & Valuation Reports
 export interface SalesSummaryReportDto {
   totalSalesCount: number;
+  totalSalesAmount?: number;
   totalRevenue: number;
+  totalCostOfGoodsSold?: number;
   totalCost?: number; // Redacted for cashier
   grossProfit?: number; // Redacted for cashier
   grossMarginPercentage?: number; // Redacted for cashier
@@ -472,7 +503,9 @@ export interface SalesSummaryReportDto {
 export interface DailySalesSummaryDto {
   date: string;
   salesCount: number;
+  salesAmount?: number;
   revenue: number;
+  costOfGoodsSold?: number;
   cost?: number; // Redacted for cashier
   grossProfit?: number; // Redacted for cashier
 }
@@ -487,9 +520,11 @@ export interface CategoryValuationSummary {
 
 export interface InventoryValuationReport {
   totalProducts: number;
+  totalSkus?: number;
   totalStockUnits: number;
   totalValuation: number;
   categories: CategoryValuationSummary[];
+  categoryBreakdowns?: CategoryValuationSummary[];
 }
 
 // Tenant Subscriptions & Quotas
@@ -504,6 +539,10 @@ export interface TenantSubscriptionInfo {
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
   daysRemaining: number;
+  productLimit?: number | null;
+  activeProductsCount?: number;
+  userLimit?: number | null;
+  activeUsersCount?: number;
   limits: {
     maxProducts: number;
     maxUsers: number;
