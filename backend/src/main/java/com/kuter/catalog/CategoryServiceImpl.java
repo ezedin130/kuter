@@ -1,6 +1,5 @@
 package com.kuter.catalog;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.dto.CategoryResponse;
 import com.kuter.catalog.dto.CreateCategoryDto;
 import com.kuter.catalog.dto.UpdateCategoryDto;
@@ -30,14 +29,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-    private final AuditService auditService;
 
     public CategoryServiceImpl(CategoryRepository categoryRepository,
-                               ProductRepository productRepository,
-                               AuditService auditService) {
+                               ProductRepository productRepository) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
-        this.auditService = auditService;
     }
 
     @Override
@@ -170,18 +166,6 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     private void logAudit(String action, UUID entityId, String details, HttpServletRequest request) {
-        UUID tenantId = TenantContext.requireTenantId();
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UUID actorId = null;
-        String actorEmail = "system";
-
-        if (auth != null && auth.getPrincipal() instanceof KuterUserPrincipal principal) {
-            actorId = principal.getUserId();
-            actorEmail = principal.getEmail();
-        }
-
-        String ip = request != null ? request.getRemoteAddr() : "127.0.0.1";
-        auditService.logEvent(tenantId, actorId, actorEmail, action, "CATEGORY",
-                entityId.toString(), details, ip);
+        log.info("[CATEGORY_OP] action={} entityId={} details={}", action, entityId, details);
     }
 }
