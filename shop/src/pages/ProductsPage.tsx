@@ -369,17 +369,26 @@ export const ProductsPage: React.FC = () => {
                       <span className="badge badge-neutral">{p.baseUnitCode}</span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <span
-                        className={`badge ${
-                          p.currentStock <= 0
-                            ? 'badge-danger'
-                            : p.lowStock
-                            ? 'badge-warning'
-                            : 'badge-success'
-                        }`}
-                      >
-                        {p.currentStock} {p.baseUnitCode}
-                      </span>
+                      {(() => {
+                        const stockQty = Number(p.quantityOnHand ?? p.currentStock ?? 0);
+                        const threshold = Number(p.reorderThreshold || 0);
+                        const isOutOfStock = stockQty <= 0;
+                        const isLowStock = isOutOfStock || stockQty <= threshold;
+                        const badgeClass = isOutOfStock || isLowStock ? 'badge-danger' : 'badge-success';
+                        const badgeLabel = isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock';
+                        const statusColor = isOutOfStock || isLowStock ? '#dc2626' : '#16a34a';
+
+                        return (
+                          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                            <span style={{ fontWeight: 700, color: statusColor }}>
+                              {stockQty} {p.baseUnitCode}
+                            </span>
+                            <span className={`badge ${badgeClass}`} style={{ fontSize: '10px' }}>
+                              {badgeLabel}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700 }}>
                       {formatCurrency(p.sellingPrice)}
