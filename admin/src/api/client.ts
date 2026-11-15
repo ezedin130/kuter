@@ -29,7 +29,6 @@ import {
   ChangePlanDto,
   SuspendSubscriptionDto,
   CancelSubscriptionDto,
-  AuditLogResponseDto,
   PageResponse,
 } from './types';
 
@@ -433,40 +432,6 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify(dto),
     });
-    return res.data;
-  }
-
-  // ==========================================
-  // Platform Audit Logs
-  // ==========================================
-
-  async getAdminAuditLogs(params: {
-    tenantId?: string;
-    action?: string;
-    entityType?: string;
-    entityId?: string;
-    actorEmail?: string;
-    outcome?: string;
-    startDate?: string;
-    endDate?: string;
-    page?: number;
-    size?: number;
-  } = {}): Promise<PageResponse<AuditLogResponseDto>> {
-    const query = new URLSearchParams();
-    if (params.tenantId) query.set('tenantId', params.tenantId);
-    if (params.action) query.set('action', params.action);
-    if (params.entityType) query.set('entityType', params.entityType);
-    if (params.entityId) query.set('entityId', params.entityId);
-    if (params.actorEmail) query.set('actorEmail', params.actorEmail);
-    if (params.outcome) query.set('outcome', params.outcome);
-    if (params.startDate) query.set('startDate', params.startDate);
-    if (params.endDate) query.set('endDate', params.endDate);
-    if (params.page !== undefined) query.set('page', params.page.toString());
-    if (params.size !== undefined) query.set('size', params.size.toString());
-
-    const queryString = query.toString();
-    const endpoint = `/admin/audit-logs${queryString ? `?${queryString}` : ''}`;
-    const res = await this.request<PageResponse<AuditLogResponseDto>>(endpoint);
     return res.data;
   }
 }
