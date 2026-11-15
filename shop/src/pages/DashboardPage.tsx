@@ -32,6 +32,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [totalProducts, setTotalProducts] = useState<number>(0);
   const [lowStockItems, setLowStockItems] = useState<StockBalanceResponse[]>([]);
+  const [lowStockCount, setLowStockCount] = useState<number>(0);
   const [recentSales, setRecentSales] = useState<SaleResponseDto[]>([]);
   const [recentMovements, setRecentMovements] = useState<StockMovementResponse[]>([]);
   const [todayRevenue, setTodayRevenue] = useState<number>(0);
@@ -40,23 +41,39 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const loadDashboardData = async () => {
     setIsLoading(true);
     try {
-      const [prodRes, lowStockRes, salesRes, movRes, subRes] = await Promise.allSettled([
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      const [prodRes, lowStockRes, salesRes, movRes, subRes, summaryRes] = await Promise.allSettled([
         shopApi.listProducts({ size: 1 }),
         shopApi.getLowStockReport(),
-        shopApi.listSales({ size: 5 }),
-        shopApi.listStockMovements({ size: 5 }),
+        shopApi.listSales({ size: 10 }),
+        shopApi.listStockMovements({ size: 8 }),
         shopApi.getSubscription(),
+        shopApi.getSalesSummary(todayStart.toISOString(), todayEnd.toISOString()),
       ]);
 
       if (prodRes.status === 'fulfilled') {
         setTotalProducts(prodRes.value.data?.totalElements || 0);
       }
       if (lowStockRes.status === 'fulfilled') {
-        setLowStockItems(lowStockRes.value.data || []);
+        const resData = lowStockRes.value.data as any;
+        const items = Array.isArray(resData) ? resData : (resData?.content || []);
+        const total = Array.isArray(resData) ? resData.length : (resData?.totalElements ?? items.length);
+        setLowStockItems(items);
+        setLowStockCount(total);
       }
       if (salesRes.status === 'fulfilled') {
         const sales = salesRes.value.data?.content || [];
         setRecentSales(sales);
+      }
+      if (summaryRes.status === 'fulfilled' && summaryRes.value.data) {
+        const rev = Number(summaryRes.value.data.totalRevenue ?? summaryRes.value.data.totalSalesAmount ?? 0);
+        setTodayRevenue(rev);
+      } else if (salesRes.status === 'fulfilled') {
+        const sales = salesRes.value.data?.content || [];
         const sum = sales.reduce((acc, s) => acc + (s.status === 'COMPLETED' ? Number(s.totalAmount) : 0), 0);
         setTodayRevenue(sum);
       }
@@ -78,10 +95,24 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   }, [activeTenant?.tenantId]);
 
   const formatCurrency = (val: number) => {
-    return Number(val || 0).toLocaleString(undefined, {
+    return `Br ${Number(val || 0).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
+    })}`;
+  };
+
+  const getMovementBadge = (type: string) => {
+    switch (type) {
+      case 'RECEIPT':
+      case 'PURCHASE_RECEIPT':
+        return <span className="badge badge-success">Buying</span>;
+      case 'SALE':
+        return <span className="badge badge-primary">Selling</span>;
+      case 'ADJUSTMENT':
+        return <span className="badge badge-warning">Adjustment</span>;
+      default:
+        return <span className="badge badge-neutral">{type}</span>;
+    }
   };
 
   return (
@@ -131,14 +162,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => onNavigate('products')}
+          style={{ cursor: 'pointer' }}
+          title="Click to view affected low-stock products in catalog"
+        >
           <div className="stat-card-header">
             <span>Low Stock Alerts</span>
             <div
               className="stat-card-icon"
               style={{
-                background: lowStockItems.length > 0 ? 'var(--warning-bg)' : 'var(--success-bg)',
-                color: lowStockItems.length > 0 ? 'var(--warning)' : 'var(--success)',
+                background: lowStockCount > 0 ? 'var(--warning-bg)' : 'var(--success-bg)',
+                color: lowStockCount > 0 ? 'var(--warning)' : 'var(--success)',
               }}
             >
               <AlertTriangle size={20} />
@@ -146,12 +182,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
           <div
             className="stat-card-value"
-            style={{ color: lowStockItems.length > 0 ? 'var(--warning)' : 'var(--ink)' }}
+            style={{ color: lowStockCount > 0 ? 'var(--warning)' : 'var(--ink)' }}
           >
-            {isLoading ? '...' : lowStockItems.length}
+            {isLoading ? '...' : lowStockCount}
           </div>
           <div className="stat-card-footer">
-            <span>At or below reorder threshold</span>
+            <span>{lowStockCount > 0 ? 'Click to inspect & reorder stock' : 'All items above threshold'}</span>
           </div>
         </div>
 
@@ -288,6 +324,81 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         )}
       </div>
 
+      {/* Low Stock Warning Alert Banner when items below threshold */}
+      {lowStockCount > 0 && (
+        <div
+          className="card"
+          style={{
+            marginBottom: '20px',
+            borderLeft: '4px solid var(--warning, #d97706)',
+            backgroundColor: '#fffbeb',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: lowStockItems.length > 0 ? '12px' : '0',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={18} style={{ color: 'var(--warning, #d97706)' }} />
+              <strong style={{ fontSize: '14px', color: '#92400e' }}>
+                Low Stock Alert: {lowStockCount} {lowStockCount === 1 ? 'item requires' : 'items require'} replenishment
+              </strong>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '12px', minHeight: '30px' }}
+              onClick={() => onNavigate('products')}
+            >
+              View Products & Stock <ArrowRight size={13} />
+            </button>
+          </div>
+          {lowStockItems.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {lowStockItems.slice(0, 5).map((item) => (
+                <div
+                  key={item.productId}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #fde68a',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    fontSize: '12.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{item.productName}</span>
+                  <span style={{ color: 'var(--danger, #dc2626)', fontWeight: 700 }}>
+                    {item.quantityOnHand} {item.baseUnitCode}
+                  </span>
+                  <span style={{ color: 'var(--muted)', fontSize: '11px' }}>
+                    (min: {item.reorderThreshold})
+                  </span>
+                </div>
+              ))}
+              {lowStockItems.length > 5 && (
+                <div
+                  style={{
+                    padding: '6px 10px',
+                    fontSize: '12px',
+                    color: 'var(--muted)',
+                    alignSelf: 'center',
+                  }}
+                >
+                  +{lowStockItems.length - 5} more items
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Two Column Grid: Recent Sales & Recent Movements */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '20px' }}>
         {/* Recent Sales */}
@@ -381,7 +492,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           <div style={{ fontSize: '11px', color: 'var(--muted)' }}>SKU: {mov.productSku}</div>
                         </td>
                         <td>
-                          <span className="badge badge-neutral">{mov.movementType}</span>
+                          {getMovementBadge(mov.movementType)}
                         </td>
                         <td
                           style={{
