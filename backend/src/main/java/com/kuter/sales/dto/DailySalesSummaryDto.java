@@ -20,4 +20,12 @@ public class DailySalesSummaryDto {
     private BigDecimal salesAmount;
     private BigDecimal costOfGoodsSold;
     private BigDecimal grossProfit;
+
+    public BigDecimal getRevenue() {
+        return salesAmount;
+    }
+
+    public BigDecimal getCost() {
+        return costOfGoodsSold;
+    }
 }
