@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp,
-  DollarSign,
   Scale,
   Calendar,
   Layers,
   RefreshCw,
   ShieldAlert,
+  Download,
+  Printer,
+  Search,
+  Coins,
 } from 'lucide-react';
 import { PageHead } from '../components/PageHead';
 import { shopApi } from '../api/client';
@@ -14,6 +17,8 @@ import {
   SalesSummaryReportDto,
   DailySalesSummaryDto,
   InventoryValuationReport,
+  StockBalanceResponse,
+  CategoryResponse,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
 
@@ -29,6 +34,13 @@ export const ReportsPage: React.FC = () => {
   const [salesSummary, setSalesSummary] = useState<SalesSummaryReportDto | null>(null);
   const [dailySales, setDailySales] = useState<DailySalesSummaryDto[]>([]);
   const [valuationReport, setValuationReport] = useState<InventoryValuationReport | null>(null);
+  const [balances, setBalances] = useState<StockBalanceResponse[]>([]);
+  const [categories, setCategories] = useState<CategoryResponse[]>([]);
+
+  // Inventory Valuation Filters
+  const [valSearch, setValSearch] = useState<string>('');
+  const [valCategory, setValCategory] = useState<string>('');
+  const [valStatus, setValStatus] = useState<'ALL' | 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK'>('ALL');
 
   const fetchReports = async () => {
     setIsLoading(true);
@@ -48,8 +60,14 @@ export const ReportsPage: React.FC = () => {
         setSalesSummary(sumRes.data);
         setDailySales(dailyRes.data || []);
       } else {
-        const valRes = await shopApi.getInventoryValuationReport();
+        const [valRes, balRes, catRes] = await Promise.all([
+          shopApi.getInventoryValuationReport(),
+          shopApi.listStockBalances({ size: 500 }),
+          shopApi.listCategories(),
+        ]);
         setValuationReport(valRes.data);
+        setBalances(balRes.data?.content || []);
+        setCategories(catRes.data?.content || []);
       }
     } catch (err: any) {
       console.error('Failed to load reports:', err);
@@ -64,10 +82,80 @@ export const ReportsPage: React.FC = () => {
 
   const formatCurrency = (val?: number) => {
     if (val == null) return '—';
-    return Number(val).toLocaleString(undefined, {
+    return `Br ${Number(val).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
+    })}`;
+  };
+
+  // Filtered product balances for valuation table
+  const filteredBalances = useMemo(() => {
+    return balances.filter((b) => {
+      if (valSearch) {
+        const query = valSearch.toLowerCase();
+        const matchesSku = (b.productSku || b.sku)?.toLowerCase().includes(query);
+        const matchesName = b.productName?.toLowerCase().includes(query);
+        if (!matchesSku && !matchesName) return false;
+      }
+      if (valCategory && b.categoryId !== valCategory) {
+        return false;
+      }
+      if (valStatus === 'OUT_OF_STOCK' && Number(b.quantityOnHand || 0) > 0) {
+        return false;
+      }
+      if (valStatus === 'LOW_STOCK' && !b.isLowStock) {
+        return false;
+      }
+      if (valStatus === 'IN_STOCK' && (Number(b.quantityOnHand || 0) <= 0 || b.isLowStock)) {
+        return false;
+      }
+      return true;
     });
+  }, [balances, valSearch, valCategory, valStatus]);
+
+  // Export filtered valuation table as CSV
+  const handleExportCsv = () => {
+    const headers = [
+      'Product Name',
+      'SKU',
+      'Category',
+      'Available Quantity',
+      'Base Unit',
+      'Average Purchase Cost (Br)',
+      'Total Stock Value (Br)',
+      'Stock Status',
+    ];
+
+    const rows = filteredBalances.map((b) => {
+      const qty = Number(b.quantityOnHand || 0);
+      const avgCost = Number(b.averageCost || 0);
+      const totalVal = Number(b.totalValuation || qty * avgCost);
+      const statusText = qty <= 0 ? 'Out of Stock' : b.isLowStock ? 'Low Stock' : 'In Stock';
+
+      return [
+        `"${b.productName.replace(/"/g, '""')}"`,
+        `"${b.productSku || b.sku}"`,
+        `"${b.categoryName || 'Uncategorized'}"`,
+        qty,
+        `"${b.baseUnitCode}"`,
+        avgCost.toFixed(2),
+        totalVal.toFixed(2),
+        `"${statusText}"`,
+      ].join(',');
+    });
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Inventory_Valuation_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -75,9 +163,31 @@ export const ReportsPage: React.FC = () => {
       <PageHead
         eyebrow="Business Intelligence"
         title="Operational & Financial Reports"
-        subtitle="Sales revenue analytics, daily intervals, moving-average cost margins, and inventory valuation"
+        subtitle="Sales revenue analytics, daily intervals, profit margins, and total inventory stock value"
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
+            {activeTab === 'inventory' && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleExportCsv}
+                  title="Export valuation report as CSV"
+                >
+                  <Download size={14} />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handlePrint}
+                  title="Print valuation report"
+                >
+                  <Printer size={14} />
+                  <span>Print Report</span>
+                </button>
+              </>
+            )}
             <button
               type="button"
               className="btn btn-secondary btn-sm"
@@ -109,14 +219,14 @@ export const ReportsPage: React.FC = () => {
         >
           <ShieldAlert size={18} />
           <span>
-            Cashier view active: Product cost of goods sold (COGS), gross margins, and inventory valuations are
+            Cashier view active: Product cost of items sold, profit margins, and inventory stock valuations are
             confidential and redacted.
           </span>
         </div>
       )}
 
       {/* Report Switcher Tabs */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             type="button"
@@ -132,7 +242,7 @@ export const ReportsPage: React.FC = () => {
             onClick={() => setActiveTab('inventory')}
           >
             <Scale size={14} />
-            <span>Inventory Valuation</span>
+            <span>Total Stock Valuation</span>
           </button>
         </div>
 
@@ -161,7 +271,7 @@ export const ReportsPage: React.FC = () => {
               <div className="stat-card-header">
                 <span>Total Revenue</span>
                 <div className="stat-card-icon" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
-                  <DollarSign size={20} />
+                  <Coins size={20} />
                 </div>
               </div>
               <div className="stat-card-value">{formatCurrency(salesSummary?.totalRevenue || 0)}</div>
@@ -202,14 +312,14 @@ export const ReportsPage: React.FC = () => {
 
                 <div className="stat-card">
                   <div className="stat-card-header">
-                    <span>Cost of Goods Sold (COGS)</span>
+                    <span>Cost of Goods Sold</span>
                     <div className="stat-card-icon" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
                       <Scale size={20} />
                     </div>
                   </div>
                   <div className="stat-card-value">{formatCurrency(salesSummary?.totalCost || 0)}</div>
                   <div className="stat-card-footer">
-                    <span>Moving weighted-average cost</span>
+                    <span>Average purchase cost of items sold</span>
                   </div>
                 </div>
               </>
@@ -219,7 +329,7 @@ export const ReportsPage: React.FC = () => {
           {/* Daily Breakdown Table */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
-              Daily Interval Breakdown
+              Daily Sales Interval Breakdown
             </h2>
             <div className="table-wrap">
               <table className="data-table">
@@ -230,7 +340,7 @@ export const ReportsPage: React.FC = () => {
                     <th style={{ textAlign: 'right' }}>Revenue</th>
                     {!isCashier && (
                       <>
-                        <th style={{ textAlign: 'right' }}>Cost</th>
+                        <th style={{ textAlign: 'right' }}>Cost of Goods Sold</th>
                         <th style={{ textAlign: 'right' }}>Gross Profit</th>
                       </>
                     )}
@@ -282,9 +392,11 @@ export const ReportsPage: React.FC = () => {
                   <Layers size={20} />
                 </div>
               </div>
-              <div className="stat-card-value">{valuationReport?.totalProducts || 0}</div>
+              <div className="stat-card-value">
+                {valuationReport?.totalProducts || valuationReport?.totalSkus || balances.length}
+              </div>
               <div className="stat-card-footer">
-                <span>SKUs tracked in inventory</span>
+                <span>SKUs tracked in shop inventory</span>
               </div>
             </div>
 
@@ -295,7 +407,10 @@ export const ReportsPage: React.FC = () => {
                   <Scale size={20} />
                 </div>
               </div>
-              <div className="stat-card-value">{valuationReport?.totalStockUnits || 0}</div>
+              <div className="stat-card-value">
+                {valuationReport?.totalStockUnits ||
+                  balances.reduce((acc, b) => acc + Number(b.quantityOnHand || 0), 0).toFixed(0)}
+              </div>
               <div className="stat-card-footer">
                 <span>Aggregated physical quantity</span>
               </div>
@@ -304,21 +419,25 @@ export const ReportsPage: React.FC = () => {
             {!isCashier && (
               <div className="stat-card" style={{ gridColumn: 'span 2' }}>
                 <div className="stat-card-header">
-                  <span>Total Warehouse Valuation</span>
+                  <span>Total Warehouse Stock Value</span>
                   <div className="stat-card-icon" style={{ background: '#e8f5ee', color: 'var(--success)' }}>
-                    <DollarSign size={20} />
+                    <Coins size={20} />
                   </div>
                 </div>
                 <div className="stat-card-value" style={{ color: 'var(--teal)' }}>
-                  {formatCurrency(valuationReport?.totalValuation || 0)}
+                  {formatCurrency(
+                    valuationReport?.totalValuation ??
+                      balances.reduce((acc, b) => acc + Number(b.totalValuation || 0), 0)
+                  )}
                 </div>
                 <div className="stat-card-footer">
-                  <span>Calculated via moving weighted-average costing</span>
+                  <span>Calculated via moving average purchase cost per product</span>
                 </div>
               </div>
             )}
           </div>
 
+          {/* Category Valuation Summary Card */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
               Valuation Breakdown by Category
@@ -328,9 +447,9 @@ export const ReportsPage: React.FC = () => {
                 <thead>
                   <tr>
                     <th>Category</th>
-                    <th style={{ textAlign: 'center' }}>SKU Count</th>
-                    <th style={{ textAlign: 'center' }}>Total Units</th>
-                    {!isCashier && <th style={{ textAlign: 'right' }}>Total Valuation</th>}
+                    <th style={{ textAlign: 'center' }}>Product Count</th>
+                    <th style={{ textAlign: 'center' }}>Total Quantity</th>
+                    {!isCashier && <th style={{ textAlign: 'right' }}>Total Stock Value (Br)</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -351,7 +470,7 @@ export const ReportsPage: React.FC = () => {
                       <tr key={idx}>
                         <td style={{ fontWeight: 700 }}>{cat.categoryName}</td>
                         <td style={{ textAlign: 'center' }}>{cat.productCount}</td>
-                        <td style={{ textAlign: 'center' }}>{cat.totalQuantity}</td>
+                        <td style={{ textAlign: 'center' }}>{Number(cat.totalQuantity).toFixed(2)}</td>
                         {!isCashier && (
                           <td style={{ textAlign: 'right', fontWeight: 700 }}>
                             {formatCurrency(cat.totalValuation)}
@@ -363,6 +482,170 @@ export const ReportsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Product-Level Inventory Valuation Table */}
+          <div className="card">
+            <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 className="card-title">Product Inventory Valuation</h2>
+                <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+                  Product-level available quantities, average purchase costs, and valuation breakdown
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--muted)' }} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ height: '34px', paddingLeft: '30px', width: '180px', fontSize: '12.5px' }}
+                    placeholder="Search product / SKU..."
+                    value={valSearch}
+                    onChange={(e) => setValSearch(e.target.value)}
+                  />
+                </div>
+
+                <select
+                  className="select-filter"
+                  style={{ height: '34px', fontSize: '12.5px' }}
+                  value={valCategory}
+                  onChange={(e) => setValCategory(e.target.value)}
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  className="select-filter"
+                  style={{ height: '34px', fontSize: '12.5px' }}
+                  value={valStatus}
+                  onChange={(e) => setValStatus(e.target.value as any)}
+                >
+                  <option value="ALL">All Stock Statuses</option>
+                  <option value="IN_STOCK">In Stock Only</option>
+                  <option value="LOW_STOCK">Low Stock Only</option>
+                  <option value="OUT_OF_STOCK">Out of Stock Only</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th style={{ textAlign: 'right' }}>Available Quantity</th>
+                    <th>Base Unit</th>
+                    {!isCashier && (
+                      <>
+                        <th style={{ textAlign: 'right' }}>Average Purchase Cost</th>
+                        <th style={{ textAlign: 'right' }}>Total Stock Value</th>
+                      </>
+                    )}
+                    <th style={{ textAlign: 'center' }}>Stock Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={isCashier ? 5 : 7} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
+                        Loading inventory balances...
+                      </td>
+                    </tr>
+                  ) : filteredBalances.length === 0 ? (
+                    <tr>
+                      <td colSpan={isCashier ? 5 : 7} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
+                        No inventory records match the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBalances.map((item) => {
+                      const qty = Number(item.quantityOnHand || 0);
+                      const avgCost = Number(item.averageCost || 0);
+                      const totalVal = Number(item.totalValuation ?? (qty * avgCost));
+                      const isOutOfStock = qty <= 0;
+                      const isLow = !isOutOfStock && item.isLowStock;
+
+                      return (
+                        <tr key={item.productId}>
+                          <td>
+                            <div style={{ fontWeight: 700 }}>{item.productName}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>SKU: {item.productSku || item.sku}</div>
+                          </td>
+                          <td>{item.categoryName || 'General'}</td>
+                          <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                            {qty.toFixed(2)}
+                          </td>
+                          <td>
+                            <span className="uom-badge">{item.baseUnitCode}</span>
+                          </td>
+                          {!isCashier && (
+                            <>
+                              <td style={{ textAlign: 'right' }}>
+                                {avgCost > 0 ? (
+                                  formatCurrency(avgCost)
+                                ) : (
+                                  <span style={{ color: 'var(--muted)', fontSize: '11.5px' }}>
+                                    Br 0.00 (Cost not set)
+                                  </span>
+                                )}
+                              </td>
+                              <td style={{ textAlign: 'right', fontWeight: 700 }}>
+                                {formatCurrency(totalVal)}
+                              </td>
+                            </>
+                          )}
+                          <td style={{ textAlign: 'center' }}>
+                            {isOutOfStock ? (
+                              <span className="badge badge-danger">Out of Stock</span>
+                            ) : isLow ? (
+                              <span className="badge badge-danger">Low Stock</span>
+                            ) : (
+                              <span className="badge badge-success">In Stock</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredBalances.length > 0 && !isCashier && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '16px',
+                  paddingTop: '12px',
+                  borderTop: '1px solid var(--border)',
+                  fontSize: '13px',
+                }}
+              >
+                <div style={{ color: 'var(--muted)' }}>
+                  Showing <strong>{filteredBalances.length}</strong> of <strong>{balances.length}</strong> products
+                </div>
+                <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--teal-dark)' }}>
+                  Filtered Total Stock Value:{' '}
+                  {formatCurrency(
+                    filteredBalances.reduce(
+                      (acc, b) => acc + Number(b.totalValuation ?? (Number(b.quantityOnHand || 0) * Number(b.averageCost || 0))),
+                      0
+                    )
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
