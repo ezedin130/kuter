@@ -47,7 +47,7 @@ export const PlansPage: React.FC = () => {
     name: '',
     description: '',
     price: 49.0,
-    currency: 'USD',
+    currency: 'ETB',
     billingInterval: 'MONTHLY',
     productLimit: 500,
     userLimit: 3,
@@ -63,7 +63,7 @@ export const PlansPage: React.FC = () => {
     name: '',
     description: '',
     price: 49.0,
-    currency: 'USD',
+    currency: 'ETB',
     billingInterval: 'MONTHLY',
     productLimit: 500,
     userLimit: 3,
@@ -222,13 +222,8 @@ export const PlansPage: React.FC = () => {
     }
   };
 
-  const formatPrice = (price: number, currency: string, interval: BillingInterval) => {
-    const formatted = new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-    }).format(price);
-    return `${formatted} / ${interval.toLowerCase()}`;
+  const formatPrice = (price: number, _currency: string, interval: BillingInterval) => {
+    return `Br ${Number(price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} / ${interval.toLowerCase()}`;
   };
 
   const columns: Column<SubscriptionPlanDto>[] = [
