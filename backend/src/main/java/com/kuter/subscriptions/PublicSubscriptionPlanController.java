@@ -1,6 +1,7 @@
 package com.kuter.subscriptions;
 
 import com.kuter.common.ApiResponse;
+import com.kuter.common.Constants;
 import com.kuter.subscriptions.dto.PublicSubscriptionPlanDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +14,7 @@ import java.util.List;
  * Public REST controller serving public subscription plan tiers for marketing and onboarding pages.
  */
 @RestController
-@RequestMapping("/api/v1/public/subscription-plans")
+@RequestMapping({Constants.API_BASE_PATH + "/public/subscription-plans", "/public/subscription-plans"})
 public class PublicSubscriptionPlanController {
 
     private final SubscriptionService subscriptionService;
