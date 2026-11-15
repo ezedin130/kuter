@@ -325,7 +325,19 @@ export interface AdminSubscriptionDetailDto {
   suspendedAt?: string;
   suspensionReason?: string;
   productLimit?: number;
+  activeProductsCount?: number;
   userLimit?: number;
+  activeUsersCount?: number;
+  branchLimit?: number;
+  limits?: {
+    maxProducts?: number;
+    maxUsers?: number;
+    branchLimit?: number;
+  };
+  usage?: {
+    productCount: number;
+    userCount: number;
+  };
   featuresSummary?: string;
   version: number;
   createdAt: string;
@@ -383,21 +395,4 @@ export interface CancelSubscriptionDto {
   reason: string;
 }
 
-// ==========================================
-// Audit Logs
-// ==========================================
 
-export interface AuditLogResponseDto {
-  id: string;
-  tenantId?: string;
-  actorId?: string;
-  actorEmail?: string;
-  action: string;
-  entityType?: string;
-  entityId?: string;
-  details?: string;
-  ipAddress?: string;
-  correlationId?: string;
-  outcome: string;
-  createdAt: string;
-}
