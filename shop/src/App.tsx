@@ -19,6 +19,7 @@ import { ShopSettingsPage } from './pages/ShopSettingsPage';
 function ShopPortalContent() {
   const { isAuthenticated, isLoading } = useAuth();
   const [currentTab, setCurrentTab] = useState<ShopTab>('dashboard');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
   if (isLoading) {
     return (
@@ -86,10 +87,18 @@ function ShopPortalContent() {
 
   return (
     <div className="shop-layout">
-      <ShopSidebar currentTab={currentTab} onSelectTab={setCurrentTab} />
+      <ShopSidebar
+        currentTab={currentTab}
+        onSelectTab={setCurrentTab}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
 
       <div className="shop-main">
-        <ShopTopbar pageTitle={getPageTitle(currentTab)} />
+        <ShopTopbar
+          pageTitle={getPageTitle(currentTab)}
+          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+        />
 
         <main className="shop-content">
           {currentTab === 'dashboard' && <DashboardPage onNavigate={setCurrentTab} />}
