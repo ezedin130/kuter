@@ -31,6 +31,17 @@ public class CreateStockAdjustmentItemDto {
     private BigDecimal targetQuantity;
 
     /**
+     * Optional unit for entering adjustment quantities (e.g. cartons or bags).
+     * If null, base unit is assumed.
+     */
+    private UUID unitId;
+
+    /**
+     * Quantity in the specified unitId.
+     */
+    private BigDecimal enteredQuantity;
+
+    /**
      * Optional unit cost for upward adjustments. If null, current weighted average cost is used.
      */
     private BigDecimal unitCost;
