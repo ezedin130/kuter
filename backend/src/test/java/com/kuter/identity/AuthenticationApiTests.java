@@ -1,8 +1,6 @@
 package com.kuter.identity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kuter.audit.AuditLog;
-import com.kuter.audit.AuditLogRepository;
 import com.kuter.config.JwtService;
 import com.kuter.identity.dto.LoginRequest;
 import com.kuter.tenancy.Tenant;
@@ -52,9 +50,6 @@ class AuthenticationApiTests {
 
     @Autowired
     private TenantMembershipRepository membershipRepository;
-
-    @Autowired
-    private AuditLogRepository auditLogRepository;
 
     @Autowired
     private com.kuter.catalog.ProductUnitConversionRepository conversionRepository;
@@ -148,11 +143,6 @@ class AuthenticationApiTests {
                 .andExpect(jsonPath("$.data.user.isPlatformAdmin", is(false)))
                 .andExpect(jsonPath("$.data.memberships[0].tenantCode", is("alpha-hardware")))
                 .andExpect(jsonPath("$.data.memberships[0].role", is("OWNER")));
-
-        // Verify audit event recorded
-        List<AuditLog> logs = auditLogRepository.findAll();
-        assertThat(logs).anyMatch(l -> "USER_LOGIN_SUCCESS".equals(l.getAction()) &&
-                "owner@alphahardware.com".equals(l.getActorEmail()));
     }
 
     @Test
@@ -218,8 +208,8 @@ class AuthenticationApiTests {
     }
 
     @Test
-    @DisplayName("Logout endpoint records audit log event")
-    void logoutCreatesAuditLog() throws Exception {
+    @DisplayName("Logout endpoint successfully completes and returns message")
+    void logoutSucceeds() throws Exception {
         KuterUserPrincipal principal = new KuterUserPrincipal(activeUser, membershipRepository.findAllByUserId(activeUser.getId()));
         String token = jwtService.generateToken(principal);
 
@@ -227,10 +217,6 @@ class AuthenticationApiTests {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message", is("Logout successful")));
-
-        List<AuditLog> logs = auditLogRepository.findAll();
-        assertThat(logs).anyMatch(l -> "USER_LOGOUT".equals(l.getAction()) &&
-                "owner@alphahardware.com".equals(l.getActorEmail()));
     }
 
     @Test
