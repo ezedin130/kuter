@@ -31,7 +31,7 @@ public class CreateTenantDto {
     private String businessRegistrationNumber;
 
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "ETB";
 
     @Builder.Default
     private String timezone = "UTC";
