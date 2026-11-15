@@ -477,4 +477,220 @@ class InventoryLendingAndBorrowingTests {
                 .andExpect(jsonPath("$.data.productObligations[0].totalLoanedBaseQuantity", is(35.0)))
                 .andExpect(jsonPath("$.data.productObligations[0].netObligationBaseQuantity", is(-15.0)));
     }
+
+    @Test
+    @DisplayName("GET /inventory/borrowings lists borrowings with pagination, search, status filters, and sorting")
+    void listBorrowingsSuccessWithFiltersAndSorting() throws Exception {
+        // Record 2 borrowings
+        CreateBorrowingRequestDto b1 = CreateBorrowingRequestDto.builder()
+                .counterpartyName("Alpha Supplier Yard")
+                .productId(product.getId())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("10.0000"))
+                .transactionDate(Instant.now())
+                .build();
+        CreateBorrowingRequestDto b2 = CreateBorrowingRequestDto.builder()
+                .counterpartyName("Beta Concrete Works")
+                .productId(product.getId())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("25.0000"))
+                .transactionDate(Instant.now())
+                .build();
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(b1)))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(b2)))
+                .andExpect(status().isCreated());
+
+        // 1. Unfiltered query
+        mockMvc.perform(get(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("sort", "transactionDate,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements", is(2)))
+                .andExpect(jsonPath("$.data.content", hasSize(2)));
+
+        // 2. Search filter matching "Alpha"
+        mockMvc.perform(get(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .param("search", "Alpha"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements", is(1)))
+                .andExpect(jsonPath("$.data.content[0].counterpartyName", is("Alpha Supplier Yard")));
+
+        // 3. Status filter matching ACTIVE
+        mockMvc.perform(get(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .param("status", "ACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements", is(2)));
+    }
+
+    @Test
+    @DisplayName("Borrowings API strictly enforces tenant data isolation")
+    void borrowingsStrictTenantIsolation() throws Exception {
+        // Create Tenant B
+        Tenant tenantB = tenantRepository.save(Tenant.builder()
+                .code("tenant-b-depot")
+                .name("Tenant B Depot")
+                .currency("ETB")
+                .timezone("UTC")
+                .status(TenantStatus.ACTIVE)
+                .build());
+
+        User ownerB = userRepository.save(User.builder()
+                .email("owner.b@tenantb.example")
+                .fullName("Owner B")
+                .passwordHash(passwordEncoder.encode("Pass123!"))
+                .isPlatformAdmin(false)
+                .status(UserStatus.ACTIVE)
+                .build());
+
+        TenantMembership memB = membershipRepository.save(TenantMembership.builder()
+                .tenantId(tenantB.getId())
+                .userId(ownerB.getId())
+                .role(TenantRole.OWNER)
+                .status(MembershipStatus.ACTIVE)
+                .permissions(Set.of(ShopPermission.values()))
+                .build());
+
+        String tokenB = jwtService.generateToken(new KuterUserPrincipal(ownerB, List.of(memB)));
+
+        // Record a borrowing in Tenant A
+        CreateBorrowingRequestDto borrowA = CreateBorrowingRequestDto.builder()
+                .counterpartyName("Tenant A Supplier")
+                .productId(product.getId())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("15.0000"))
+                .transactionDate(Instant.now())
+                .build();
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(borrowA)))
+                .andExpect(status().isCreated());
+
+        // Tenant B queries borrowings -> must see 0 elements
+        mockMvc.perform(get(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenB)
+                        .header(Constants.TENANT_ID_HEADER, tenantB.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements", is(0)))
+                .andExpect(jsonPath("$.data.content", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("Borrowings API authentication and granular authorization enforcement")
+    void borrowingsAuthenticationAndGranularPermissions() throws Exception {
+        // 1. Missing authentication token -> 401 Unauthorized
+        mockMvc.perform(get(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString()))
+                .andExpect(status().isUnauthorized());
+
+        // 2. User without LENDING permissions (e.g. Cashier with only sales permissions) -> 403 Forbidden
+        User cashier = userRepository.save(User.builder()
+                .email("cashier@cementcentral.example")
+                .fullName("Cashier User")
+                .passwordHash(passwordEncoder.encode("Pass123!"))
+                .isPlatformAdmin(false)
+                .status(UserStatus.ACTIVE)
+                .build());
+
+        TenantMembership cashierMem = membershipRepository.save(TenantMembership.builder()
+                .tenantId(tenant.getId())
+                .userId(cashier.getId())
+                .role(TenantRole.CASHIER)
+                .status(MembershipStatus.ACTIVE)
+                .permissions(Set.of(ShopPermission.SALES_CREATE, ShopPermission.SALES_VIEW))
+                .build());
+
+        String cashierToken = jwtService.generateToken(new KuterUserPrincipal(cashier, List.of(cashierMem)));
+
+        mockMvc.perform(get(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + cashierToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString()))
+                .andExpect(status().isForbidden());
+
+        CreateBorrowingRequestDto borrowDto = CreateBorrowingRequestDto.builder()
+                .counterpartyName("Supplier X")
+                .productId(product.getId())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("10.0000"))
+                .build();
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + cashierToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(borrowDto)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Invalid borrowing requests return 400 Bad Request or 404 Not Found without leaking stack traces")
+    void invalidBorrowingRequestsValidation() throws Exception {
+        // 1. Blank counterparty name -> 400 Bad Request
+        CreateBorrowingRequestDto blankCounterparty = CreateBorrowingRequestDto.builder()
+                .counterpartyName("   ")
+                .productId(product.getId())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("10.0000"))
+                .build();
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(blankCounterparty)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Request validation failed")));
+
+        // 2. Non-positive quantity -> 400 Bad Request
+        CreateBorrowingRequestDto negativeQty = CreateBorrowingRequestDto.builder()
+                .counterpartyName("Valid Supplier")
+                .productId(product.getId())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("-5.0000"))
+                .build();
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(negativeQty)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("Request validation failed")));
+
+        // 3. Non-existent product ID -> 404 Not Found
+        CreateBorrowingRequestDto nonExistentProd = CreateBorrowingRequestDto.builder()
+                .counterpartyName("Valid Supplier")
+                .productId(UUID.randomUUID())
+                .unitDefinitionId(bagUnit.getId())
+                .quantity(new BigDecimal("10.0000"))
+                .build();
+
+        mockMvc.perform(post(Constants.API_BASE_PATH + "/inventory/borrowings")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + storekeeperToken)
+                        .header(Constants.TENANT_ID_HEADER, tenant.getId().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(nonExistentProd)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message", containsString("Product not found")));
+    }
 }
