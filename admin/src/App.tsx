@@ -8,7 +8,6 @@ import { RequestsPage } from './pages/RequestsPage';
 import { TenantsPage } from './pages/TenantsPage';
 import { PlansPage } from './pages/PlansPage';
 import { SubscriptionsPage } from './pages/SubscriptionsPage';
-import { AuditLogsPage } from './pages/AuditLogsPage';
 import { apiClient } from './api/client';
 import { HealthResponse } from './api/types';
 
@@ -94,8 +93,6 @@ function AdminShell() {
         return 'Subscription Plans & Tiers';
       case 'subscriptions':
         return 'Tenant Subscriptions';
-      case 'audit':
-        return 'Platform Audit Logs';
       default:
         return 'Platform Administration';
     }
@@ -136,8 +133,6 @@ function AdminShell() {
           {currentTab === 'plans' && <PlansPage />}
 
           {currentTab === 'subscriptions' && <SubscriptionsPage />}
-
-          {currentTab === 'audit' && <AuditLogsPage />}
         </main>
       </div>
     </div>
