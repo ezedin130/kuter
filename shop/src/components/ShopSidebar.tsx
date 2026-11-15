@@ -35,9 +35,11 @@ export type ShopTab =
 interface ShopSidebarProps {
   currentTab: ShopTab;
   onSelectTab: (tab: ShopTab) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTab }) => {
+export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTab, isOpen, onClose }) => {
   const {
     user,
     activeTenant,
@@ -50,8 +52,21 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
     canViewLending,
   } = useAuth();
 
+  const handleSelect = (tab: ShopTab) => {
+    onSelectTab(tab);
+    if (onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <aside className="shop-sidebar">
+    <>
+      <div
+        className={`sidebar-backdrop ${isOpen ? 'open' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className={`shop-sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo-mark">K</div>
         <div>
@@ -75,7 +90,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
         <button
           type="button"
           className={`sidebar-nav-item ${currentTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => onSelectTab('dashboard')}
+          onClick={() => handleSelect('dashboard')}
         >
           <LayoutDashboard size={18} />
           <span>Dashboard</span>
@@ -86,7 +101,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
           <button
             type="button"
             className={`sidebar-nav-item ${currentTab === 'sales-pos' ? 'active' : ''}`}
-            onClick={() => onSelectTab('sales-pos')}
+            onClick={() => handleSelect('sales-pos')}
           >
             <ShoppingCart size={18} />
             <span>Counter POS</span>
@@ -95,7 +110,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
         <button
           type="button"
           className={`sidebar-nav-item ${currentTab === 'sales-history' ? 'active' : ''}`}
-          onClick={() => onSelectTab('sales-history')}
+          onClick={() => handleSelect('sales-history')}
         >
           <Receipt size={18} />
           <span>Sales History</span>
@@ -105,7 +120,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
         <button
           type="button"
           className={`sidebar-nav-item ${currentTab === 'products' ? 'active' : ''}`}
-          onClick={() => onSelectTab('products')}
+          onClick={() => handleSelect('products')}
         >
           <Package size={18} />
           <span>Products</span>
@@ -115,7 +130,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
           <button
             type="button"
             className={`sidebar-nav-item ${currentTab === 'categories' ? 'active' : ''}`}
-            onClick={() => onSelectTab('categories')}
+            onClick={() => handleSelect('categories')}
           >
             <FolderTree size={18} />
             <span>Categories</span>
@@ -127,18 +142,18 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
             <button
               type="button"
               className={`sidebar-nav-item ${currentTab === 'receive-stock' ? 'active' : ''}`}
-              onClick={() => onSelectTab('receive-stock')}
+              onClick={() => handleSelect('receive-stock')}
             >
               <Truck size={18} />
-              <span>Receive Stock</span>
+              <span>Stock Receiving</span>
             </button>
             <button
               type="button"
               className={`sidebar-nav-item ${currentTab === 'adjustments' ? 'active' : ''}`}
-              onClick={() => onSelectTab('adjustments')}
+              onClick={() => handleSelect('adjustments')}
             >
               <SlidersHorizontal size={18} />
-              <span>Adjustments</span>
+              <span>Stock Adjustments</span>
             </button>
           </>
         )}
@@ -147,27 +162,27 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
           <button
             type="button"
             className={`sidebar-nav-item ${currentTab === 'lending' ? 'active' : ''}`}
-            onClick={() => onSelectTab('lending')}
+            onClick={() => handleSelect('lending')}
           >
             <ArrowLeftRight size={18} />
-            <span>Lending & Borrowing</span>
+            <span>Borrowing & Lending</span>
           </button>
         )}
 
         <button
           type="button"
           className={`sidebar-nav-item ${currentTab === 'movements' ? 'active' : ''}`}
-          onClick={() => onSelectTab('movements')}
+          onClick={() => handleSelect('movements')}
         >
           <History size={18} />
-          <span>Stock Ledger</span>
+          <span>Stock History</span>
         </button>
 
         <div className="sidebar-nav-section-title">Management</div>
         <button
           type="button"
           className={`sidebar-nav-item ${currentTab === 'reports' ? 'active' : ''}`}
-          onClick={() => onSelectTab('reports')}
+          onClick={() => handleSelect('reports')}
         >
           <BarChart3 size={18} />
           <span>Reports</span>
@@ -178,7 +193,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
             <button
               type="button"
               className={`sidebar-nav-item ${currentTab === 'subscription' ? 'active' : ''}`}
-              onClick={() => onSelectTab('subscription')}
+              onClick={() => handleSelect('subscription')}
             >
               <CreditCard size={18} />
               <span>Subscription</span>
@@ -186,7 +201,7 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
             <button
               type="button"
               className={`sidebar-nav-item ${currentTab === 'settings' ? 'active' : ''}`}
-              onClick={() => onSelectTab('settings')}
+              onClick={() => handleSelect('settings')}
             >
               <Settings size={18} />
               <span>Shop Settings</span>
@@ -211,5 +226,6 @@ export const ShopSidebar: React.FC<ShopSidebarProps> = ({ currentTab, onSelectTa
         </button>
       </div>
     </aside>
+    </>
   );
 };
