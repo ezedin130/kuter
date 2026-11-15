@@ -1,6 +1,5 @@
 package com.kuter.subscriptions;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.ProductRepository;
 import com.kuter.catalog.ProductStatus;
 import com.kuter.common.BadRequestException;
@@ -31,6 +30,7 @@ import com.kuter.subscriptions.dto.UpdateSubscriptionPlanDto;
 import com.kuter.tenancy.Tenant;
 import com.kuter.tenancy.TenantRepository;
 import jakarta.persistence.criteria.Predicate;
+import java.util.Comparator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -69,7 +69,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final TenantMembershipRepository membershipRepository;
-    private final AuditService auditService;
     private Clock clock;
 
     public SubscriptionServiceImpl(SubscriptionPlanRepository planRepository,
@@ -79,7 +78,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                                    UserRepository userRepository,
                                    ProductRepository productRepository,
                                    TenantMembershipRepository membershipRepository,
-                                   AuditService auditService,
                                    Clock clock) {
         this.planRepository = planRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -88,7 +86,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.membershipRepository = membershipRepository;
-        this.auditService = auditService;
         this.clock = clock;
     }
 
@@ -113,7 +110,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .name(dto.getName().trim())
                 .description(StringUtils.hasText(dto.getDescription()) ? dto.getDescription().trim() : null)
                 .price(dto.getPrice())
-                .currency(StringUtils.hasText(dto.getCurrency()) ? dto.getCurrency().trim().toUpperCase() : "USD")
+                .currency(StringUtils.hasText(dto.getCurrency()) ? dto.getCurrency().trim().toUpperCase() : "ETB")
                 .billingInterval(dto.getBillingInterval())
                 .productLimit(dto.getProductLimit())
                 .userLimit(dto.getUserLimit())
@@ -235,13 +232,22 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Transactional(readOnly = true)
     public List<PublicSubscriptionPlanDto> getPublicPlans() {
         return planRepository.findAllByIsActiveTrueAndIsPublicTrue().stream()
+                .sorted((p1, p2) -> {
+                    BigDecimal price1 = p1.getPrice() != null ? p1.getPrice() : BigDecimal.ZERO;
+                    BigDecimal price2 = p2.getPrice() != null ? p2.getPrice() : BigDecimal.ZERO;
+                    int cmp = price1.compareTo(price2);
+                    if (cmp != 0) return cmp;
+                    String name1 = p1.getName() != null ? p1.getName() : "";
+                    String name2 = p2.getName() != null ? p2.getName() : "";
+                    return name1.compareToIgnoreCase(name2);
+                })
                 .map(p -> PublicSubscriptionPlanDto.builder()
                         .id(p.getId())
                         .code(p.getCode())
                         .name(p.getName())
                         .description(p.getDescription())
                         .price(p.getPrice())
-                        .currency(p.getCurrency())
+                        .currency(p.getCurrency() != null ? p.getCurrency() : "ETB")
                         .billingInterval(p.getBillingInterval())
                         .productLimit(p.getProductLimit())
                         .userLimit(p.getUserLimit())
@@ -731,7 +737,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .planCode(plan != null ? plan.getCode() : "starter")
                 .planDescription(plan != null ? plan.getDescription() : "Default tier")
                 .price(plan != null ? plan.getPrice() : BigDecimal.ZERO)
-                .currency(plan != null ? plan.getCurrency() : "USD")
+                .currency(plan != null ? plan.getCurrency() : "ETB")
                 .billingInterval(plan != null ? plan.getBillingInterval() : BillingInterval.MONTHLY)
                 .status(storedStatus)
                 .effectiveStatus(effectiveStatus)
@@ -794,9 +800,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     // -------------------------------------------------------------------------
 
     private void logAudit(UUID tenantId, KuterUserPrincipal admin, String action, String entityType, UUID entityId, String details) {
-        UUID actorId = admin != null ? admin.getUserId() : null;
-        String actorEmail = admin != null ? admin.getEmail() : "system";
-        auditService.logEvent(tenantId, actorId, actorEmail, action, entityType, entityId != null ? entityId.toString() : null, details, null);
+        log.info("[SUBSCRIPTION_OP] action={} entityType={} entityId={} tenantId={} details={}",
+                action, entityType, entityId, tenantId, details);
     }
 
     private TenantSubscription findSubscriptionOrThrow(UUID id) {
@@ -834,7 +839,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .planName(plan != null ? plan.getName() : "Unknown Plan")
                 .planCode(plan != null ? plan.getCode() : "unknown")
                 .price(plan != null ? plan.getPrice() : BigDecimal.ZERO)
-                .currency(plan != null ? plan.getCurrency() : "USD")
+                .currency(plan != null ? plan.getCurrency() : "ETB")
                 .billingInterval(plan != null ? plan.getBillingInterval() : BillingInterval.MONTHLY)
                 .status(sub.getStatus())
                 .effectiveStatus(effective)
