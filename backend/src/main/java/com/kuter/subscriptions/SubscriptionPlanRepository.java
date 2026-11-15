@@ -18,6 +18,8 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
 
     Optional<SubscriptionPlan> findByCode(String code);
 
+    Optional<SubscriptionPlan> findByCodeIgnoreCase(String code);
+
     boolean existsByCode(String code);
 
     List<SubscriptionPlan> findAllByIsActiveTrue();
