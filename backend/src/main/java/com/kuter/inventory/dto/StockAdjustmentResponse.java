@@ -24,4 +24,12 @@ public class StockAdjustmentResponse {
     private String createdByName;
     private Instant createdAt;
     private List<StockAdjustmentItemResponse> items;
+
+    public Instant getAdjustedAt() {
+        return this.createdAt;
+    }
+
+    public String getAdjustedByName() {
+        return this.createdByName;
+    }
 }
