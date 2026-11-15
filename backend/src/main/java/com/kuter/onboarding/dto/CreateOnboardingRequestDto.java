@@ -45,8 +45,11 @@ public class CreateOnboardingRequestDto {
     @Size(max = 255, message = "Business address cannot exceed 255 characters")
     private String businessAddress;
 
+    @Size(min = 8, max = 100, message = "Password must be at least 8 characters")
+    private String password;
+
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "ETB";
 
     private String applicantNotes;
 }
