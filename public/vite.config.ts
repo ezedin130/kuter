@@ -16,6 +16,12 @@ export default defineConfig({
   },
   preview: {
     port: 5175,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     setupFiles: ['./src/__tests__/setup.ts'],
