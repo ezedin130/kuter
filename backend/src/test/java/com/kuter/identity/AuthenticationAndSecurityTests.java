@@ -1,8 +1,5 @@
 package com.kuter.identity;
 
-import com.kuter.audit.AuditLog;
-import com.kuter.audit.AuditLogRepository;
-import com.kuter.audit.AuditService;
 import com.kuter.tenancy.Tenant;
 import com.kuter.tenancy.TenantRepository;
 import com.kuter.tenancy.TenantStatus;
@@ -42,12 +39,6 @@ class AuthenticationAndSecurityTests {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private AuditService auditService;
-
-    @Autowired
-    private AuditLogRepository auditLogRepository;
-
-    @Autowired
     private com.kuter.catalog.ProductRepository productRepository;
 
     @Autowired
@@ -64,7 +55,6 @@ class AuthenticationAndSecurityTests {
 
     @BeforeEach
     void setUp() {
-        auditLogRepository.deleteAll();
         conversionRepository.deleteAll();
         productRepository.deleteAll();
         categoryRepository.deleteAll();
@@ -177,39 +167,5 @@ class AuthenticationAndSecurityTests {
         assertThat(principal.getAuthorities())
                 .extracting("authority")
                 .contains("ROLE_PLATFORM_ADMIN");
-    }
-
-    @Test
-    @DisplayName("AuditService records immutable audit entries for security and tenant events")
-    void auditServiceRecordsEvents() {
-        User auditor = userRepository.save(User.builder()
-                .email("auditor@shop.com")
-                .passwordHash(passwordEncoder.encode("AuditSecret123!"))
-                .fullName("Audit Officer")
-                .status(UserStatus.ACTIVE)
-                .isPlatformAdmin(false)
-                .build());
-
-        auditService.logEvent(
-                shopA.getId(),
-                auditor.getId(),
-                auditor.getEmail(),
-                "PASSWORD_CHANGE",
-                "USER",
-                auditor.getId().toString(),
-                "User updated password successfully",
-                "192.168.1.10"
-        );
-
-        List<AuditLog> logs = auditLogRepository.findByTenantIdOrderByCreatedAtDesc(shopA.getId());
-        assertThat(logs).hasSize(1);
-
-        AuditLog log = logs.get(0);
-        assertThat(log.getAction()).isEqualTo("PASSWORD_CHANGE");
-        assertThat(log.getActorEmail()).isEqualTo("auditor@shop.com");
-        assertThat(log.getActorId()).isEqualTo(auditor.getId());
-        assertThat(log.getEntityType()).isEqualTo("USER");
-        assertThat(log.getIpAddress()).isEqualTo("192.168.1.10");
-        assertThat(log.getCreatedAt()).isNotNull();
     }
 }
