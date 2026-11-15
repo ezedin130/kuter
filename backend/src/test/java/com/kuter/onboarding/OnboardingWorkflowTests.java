@@ -379,4 +379,72 @@ class OnboardingWorkflowTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("Cannot approve onboarding request in status: REJECTED")));
     }
+
+    @Test
+    @DisplayName("Public registration endpoint aliases and status routes are accessible without 403 Forbidden")
+    void publicRegistrationAliasesAccessibleWithoutAuth() throws Exception {
+        CreateOnboardingRequestDto dto1 = CreateOnboardingRequestDto.builder()
+                .shopName("Addis Hardware Supply")
+                .ownerFullName("Abebe Bikila")
+                .ownerEmail("abebe@addishardware.et")
+                .ownerPhone("+251911223344")
+                .requestedPlanCode("starter")
+                .currency("ETB")
+                .password("StrongPass123!")
+                .build();
+
+        // 1. Test POST /api/v1/onboarding/requests
+        mockMvc.perform(post("/api/v1/onboarding/requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto1)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.referenceCode", notNullValue()));
+
+        CreateOnboardingRequestDto dto2 = CreateOnboardingRequestDto.builder()
+                .shopName("Bole Building Mart")
+                .ownerFullName("Almaz Ayana")
+                .ownerEmail("almaz@bolebuilding.et")
+                .ownerPhone("+251922334455")
+                .requestedPlanCode("starter")
+                .currency("ETB")
+                .password("StrongPass123!")
+                .build();
+
+        // 2. Test POST /api/v1/register
+        mockMvc.perform(post("/api/v1/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto2)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.referenceCode", notNullValue()));
+
+        CreateOnboardingRequestDto dto3 = CreateOnboardingRequestDto.builder()
+                .shopName("Merkato Timber Center")
+                .ownerFullName("Kenenisa Bekele")
+                .ownerEmail("kenenisa@merkatotimber.et")
+                .ownerPhone("+251933445566")
+                .requestedPlanCode("starter")
+                .currency("ETB")
+                .password("StrongPass123!")
+                .build();
+
+        // 3. Test POST /register
+        mockMvc.perform(post("/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto3)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.data.referenceCode", notNullValue()));
+
+        // 4. Test GET /api/v1/public/subscription-plans without auth
+        mockMvc.perform(get("/api/v1/public/subscription-plans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)));
+
+        // 5. Test GET /public/subscription-plans without auth
+        mockMvc.perform(get("/public/subscription-plans"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)));
+    }
 }
