@@ -29,7 +29,8 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
     setError(null);
     try {
       const data = await publicApi.getPublicPlans();
-      setPlans(data);
+      const sorted = [...data].sort((a, b) => Number(a.price) - Number(b.price));
+      setPlans(sorted);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load subscription plans';
       setError(msg);
@@ -119,7 +120,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
                   <p>{plan.description}</p>
                   <div className="price">
                     <small>from</small>
-                    <strong>${calculatedPrice}</strong>
+                    <strong>Br {calculatedPrice.toLocaleString()}</strong>
                     <span>/ month {annual && '(billed annually)'}</span>
                   </div>
                   <div className="limits">
@@ -168,7 +169,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onNavigate }) => {
         )}
 
         <p className="sample-note">
-          <AlertCircle /> Prices shown are billed in USD. Additional currencies (GHS, NGN, KES) can be requested during registration.
+          <AlertCircle /> Prices shown are billed in Ethiopian Birr (ETB / Br). All plans include free support and onboarding setup.
         </p>
       </section>
 
