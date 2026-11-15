@@ -38,4 +38,18 @@ public class ProductSummaryResponse {
     private boolean isLowStock;
     private Instant createdAt;
     private Instant updatedAt;
+
+    public boolean isLowStock() {
+        return isLowStock;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("currentStock")
+    public BigDecimal getCurrentStock() {
+        return quantityOnHand != null ? quantityOnHand : BigDecimal.ZERO;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("lowStock")
+    public boolean getLowStock() {
+        return isLowStock;
+    }
 }
