@@ -48,4 +48,8 @@ public class SaleResponseDto {
 
     private List<SaleItemResponseDto> items;
     private Instant createdAt;
+
+    public BigDecimal getTotalRevenue() {
+        return totalAmount;
+    }
 }
