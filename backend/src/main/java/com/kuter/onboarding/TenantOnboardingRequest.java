@@ -59,7 +59,7 @@ public class TenantOnboardingRequest extends BaseEntity {
 
     @Column(name = "currency", nullable = false, length = 10)
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "ETB";
 
     @Column(name = "applicant_notes", columnDefinition = "TEXT")
     private String applicantNotes;
@@ -80,4 +80,13 @@ public class TenantOnboardingRequest extends BaseEntity {
 
     @Column(name = "created_tenant_id")
     private UUID createdTenantId;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
+
+    @Column(name = "email_sent_at")
+    private Instant emailSentAt;
+
+    @Column(name = "approval_email_sent_at")
+    private Instant approvalEmailSentAt;
 }
