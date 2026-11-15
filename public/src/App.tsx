@@ -10,12 +10,23 @@ import { AboutPage } from './pages/AboutPage';
 import { ContactPage } from './pages/ContactPage';
 import './styles/public.css';
 
+const VALID_PAGES: PublicPage[] = ['home', 'features', 'pricing', 'register', 'status', 'about', 'contact'];
+
+function parseCurrentPage(): PublicPage {
+  if (typeof window === 'undefined') return 'home';
+  // Check hash first (e.g. #register or #/register)
+  const rawHash = window.location.hash.replace(/^#[/]?/, '').split('?')[0].toLowerCase() as PublicPage;
+  if (VALID_PAGES.includes(rawHash)) return rawHash;
+
+  // Then check pathname (e.g. /register or /pricing)
+  const rawPath = window.location.pathname.replace(/^\//, '').split('/')[0].split('?')[0].toLowerCase() as PublicPage;
+  if (VALID_PAGES.includes(rawPath)) return rawPath;
+
+  return 'home';
+}
+
 export function App() {
-  const [currentPage, setCurrentPage] = useState<PublicPage>(() => {
-    const hash = window.location.hash.replace('#', '') as PublicPage;
-    const validPages: PublicPage[] = ['home', 'features', 'pricing', 'register', 'status', 'about', 'contact'];
-    return validPages.includes(hash) ? hash : 'home';
-  });
+  const [currentPage, setCurrentPage] = useState<PublicPage>(parseCurrentPage);
   const [selectedPlan, setSelectedPlan] = useState<string>('growth');
 
   const navigate = (page: PublicPage, planCode?: string) => {
@@ -28,18 +39,16 @@ export function App() {
   };
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '') as PublicPage;
-      const validPages: PublicPage[] = ['home', 'features', 'pricing', 'register', 'status', 'about', 'contact'];
-      if (validPages.includes(hash)) {
-        setCurrentPage(hash);
-      } else if (!window.location.hash) {
-        setCurrentPage('home');
-      }
+    const handleLocationChange = () => {
+      setCurrentPage(parseCurrentPage());
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    window.addEventListener('popstate', handleLocationChange);
+    return () => {
+      window.removeEventListener('hashchange', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   // For Registration and Status pages, render their dedicated auth layout
