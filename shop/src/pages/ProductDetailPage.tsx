@@ -8,9 +8,9 @@ import {
   Scale,
   DollarSign,
   AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 import { PageHead } from '../components/PageHead';
-import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Alert } from '../components/Alert';
 import { shopApi } from '../api/client';
@@ -192,72 +192,109 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       />
 
       {/* Overview Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-header">
-            <span>Base Stock on Hand</span>
-            <div className="stat-card-icon" style={{ background: '#eef6f9', color: 'var(--blue)' }}>
-              <Package size={20} />
-            </div>
-          </div>
-          <div className="stat-card-value">
-            {product.currentStock} {product.baseUnitCode}
-          </div>
-          <div className="stat-card-footer">
-            <span>Reorder Level: {product.reorderThreshold} {product.baseUnitCode}</span>
-          </div>
-        </div>
+      {(() => {
+        const unitLabel = product.baseUnitName || product.baseUnitCode || 'Units';
+        const stockQty = Number(product.quantityOnHand ?? product.currentStock ?? 0);
+        const threshold = Number(product.reorderThreshold || 0);
+        const isOutOfStock = stockQty <= 0;
+        const isLowStock = isOutOfStock || stockQty <= threshold;
+        const stockStatusLabel = isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock';
+        const stockStatusColor = isLowStock ? '#dc2626' : '#16a34a';
+        const stockStatusBg = isLowStock ? '#fef2f2' : '#f0fdf4';
+        const stockStatusBorder = isLowStock ? '#fca5a5' : '#bbf7d0';
 
-        <div className="stat-card">
-          <div className="stat-card-header">
-            <span>Base Selling Price</span>
-            <div className="stat-card-icon" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
-              <DollarSign size={20} />
-            </div>
-          </div>
-          <div className="stat-card-value">{formatCurrency(product.sellingPrice)}</div>
-          <div className="stat-card-footer">
-            <span>Per 1 {product.baseUnitCode}</span>
-          </div>
-        </div>
-
-        {!isCashier && (
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <span>Weighted Avg Cost</span>
-              <div className="stat-card-icon" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
-                <Scale size={20} />
+        return (
+          <div className="stats-grid">
+            <div className="stat-card" style={{ borderLeft: `4px solid ${stockStatusColor}` }}>
+              <div className="stat-card-header">
+                <span>Available Quantity on Hand</span>
+                <div className="stat-card-icon" style={{ background: stockStatusBg, color: stockStatusColor }}>
+                  <Package size={20} />
+                </div>
+              </div>
+              <div className="stat-card-value" style={{ color: stockStatusColor }}>
+                {stockQty} {unitLabel}
+              </div>
+              <div className="stat-card-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Reorder Level: {threshold} {unitLabel}</span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    backgroundColor: stockStatusBg,
+                    color: stockStatusColor,
+                    border: `1px solid ${stockStatusBorder}`,
+                  }}
+                >
+                  {stockStatusLabel}
+                </span>
               </div>
             </div>
-            <div className="stat-card-value">{formatCurrency(product.averageCost || product.costPrice)}</div>
-            <div className="stat-card-footer">
-              <span>Valuation: {formatCurrency(product.totalValuation)}</span>
-            </div>
-          </div>
-        )}
 
-        <div className="stat-card">
-          <div className="stat-card-header">
-            <span>Catalog Status</span>
-            <div className="stat-card-icon" style={{ background: '#f0f4f5', color: 'var(--ink)' }}>
-              <StatusBadge status={product.status} />
+            <div className="stat-card">
+              <div className="stat-card-header">
+                <span>Base Selling Price</span>
+                <div className="stat-card-icon" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
+                  <DollarSign size={20} />
+                </div>
+              </div>
+              <div className="stat-card-value">{formatCurrency(product.sellingPrice)}</div>
+              <div className="stat-card-footer">
+                <span>Per 1 {unitLabel}</span>
+              </div>
+            </div>
+
+            {!isCashier && (
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <span>Average Purchase Cost</span>
+                  <div className="stat-card-icon" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
+                    <Scale size={20} />
+                  </div>
+                </div>
+                <div className="stat-card-value">{formatCurrency(product.averageCost || product.costPrice)}</div>
+                <div className="stat-card-footer">
+                  <span>Total Stock Value: {formatCurrency(product.totalValuation)}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="stat-card">
+              <div className="stat-card-header">
+                <span>Stock & Catalog Status</span>
+                <div className="stat-card-icon" style={{ background: stockStatusBg, color: stockStatusColor }}>
+                  {isLowStock ? <AlertTriangle size={20} /> : <CheckCircle2 size={20} />}
+                </div>
+              </div>
+              <div className="stat-card-value" style={{ fontSize: '18px' }}>
+                <span
+                  style={{
+                    color: stockStatusColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isLowStock ? <AlertTriangle size={18} color="#dc2626" /> : <CheckCircle2 size={18} color="#16a34a" />}
+                  <span>{stockStatusLabel}</span>
+                </span>
+              </div>
+              <div className="stat-card-footer">
+                <span>
+                  {isOutOfStock
+                    ? 'Replenish immediately — current stock is 0'
+                    : isLowStock
+                    ? `Below reorder threshold (${product.reorderThreshold} ${unitLabel})`
+                    : `Sufficient stock (${product.currentStock} ${unitLabel} available)`}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="stat-card-value" style={{ fontSize: '18px' }}>
-            {product.lowStock ? (
-              <span style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <AlertTriangle size={18} />
-                <span>Low Stock</span>
-              </span>
-            ) : (
-              <span style={{ color: 'var(--success)' }}>Optimal Level</span>
-            )}
-          </div>
-          <div className="stat-card-footer">
-            <span>{conversions.length} secondary unit conversions configured</span>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Stock Equivalent in Secondary Units Banner */}
       {conversions.length > 0 && (
