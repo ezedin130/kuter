@@ -20,7 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
  * shop registration requests and check application status.
  */
 @RestController
-@RequestMapping(Constants.API_BASE_PATH + "/onboarding-requests")
+@RequestMapping({
+        Constants.API_BASE_PATH + "/onboarding-requests",
+        Constants.API_BASE_PATH + "/onboarding/requests",
+        Constants.API_BASE_PATH + "/register",
+        "/onboarding-requests",
+        "/register"
+})
 public class PublicOnboardingController {
 
     private final OnboardingService onboardingService;
