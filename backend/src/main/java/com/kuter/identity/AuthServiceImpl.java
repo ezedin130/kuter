@@ -1,6 +1,5 @@
 package com.kuter.identity;
 
-import com.kuter.audit.AuditService;
 import com.kuter.common.BadRequestException;
 import com.kuter.common.ForbiddenException;
 import com.kuter.common.ResourceNotFoundException;
@@ -48,7 +47,6 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final TenantMembershipRepository membershipRepository;
     private final TenantRepository tenantRepository;
-    private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
 
     public AuthServiceImpl(AuthenticationManager authenticationManager,
@@ -56,14 +54,12 @@ public class AuthServiceImpl implements AuthService {
                            UserRepository userRepository,
                            TenantMembershipRepository membershipRepository,
                            TenantRepository tenantRepository,
-                           AuditService auditService,
                            PasswordEncoder passwordEncoder) {
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.tenantRepository = tenantRepository;
-        this.auditService = auditService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -81,8 +77,7 @@ public class AuthServiceImpl implements AuthService {
             KuterUserPrincipal principal = (KuterUserPrincipal) auth.getPrincipal();
 
             if (principal.getStatus() != UserStatus.ACTIVE) {
-                auditService.logEvent(null, principal.getUserId(), email, "USER_LOGIN_BLOCKED",
-                        "USER", principal.getUserId().toString(), "Account is " + principal.getStatus(), ipAddress);
+                log.warn("Login blocked: user account is {} for email '{}' from IP '{}'", principal.getStatus(), email, ipAddress);
                 throw new LockedException("User account is suspended or inactive");
             }
 
@@ -95,8 +90,7 @@ public class AuthServiceImpl implements AuthService {
             String token = jwtService.generateToken(principal);
             List<TenantMembershipDto> memberships = buildMembershipDtos(principal.getUserId());
 
-            auditService.logEvent(null, principal.getUserId(), email, "USER_LOGIN_SUCCESS",
-                    "USER", principal.getUserId().toString(), "Login successful", ipAddress);
+            log.info("Login successful for user '{}' (id: {}) from IP '{}'", email, principal.getUserId(), ipAddress);
 
             UserSummaryDto userSummary = UserSummaryDto.builder()
                     .id(principal.getUserId())
@@ -116,8 +110,6 @@ public class AuthServiceImpl implements AuthService {
                     .build();
 
         } catch (BadCredentialsException ex) {
-            auditService.logEvent(null, null, email, "USER_LOGIN_FAILURE",
-                    "USER", "none", "Bad credentials provided", ipAddress);
             log.warn("Failed login attempt for email '{}' from IP '{}'", email, ipAddress);
             throw ex;
         } catch (DisabledException | LockedException ex) {
@@ -129,8 +121,7 @@ public class AuthServiceImpl implements AuthService {
     public void logout(KuterUserPrincipal principal, HttpServletRequest httpRequest) {
         if (principal != null) {
             String ipAddress = extractClientIp(httpRequest);
-            auditService.logEvent(null, principal.getUserId(), principal.getEmail(), "USER_LOGOUT",
-                    "USER", principal.getUserId().toString(), "User logged out", ipAddress);
+            log.info("User '{}' (id: {}) logged out from IP '{}'", principal.getEmail(), principal.getUserId(), ipAddress);
         }
     }
 
@@ -197,8 +188,7 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + principal.getUserId()));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            auditService.logEvent(null, user.getId(), user.getEmail(), "USER_PASSWORD_CHANGE_FAILED",
-                    "USER", user.getId().toString(), "Incorrect current password", ipAddress);
+            log.warn("Password change failed: incorrect current password for user id={}, email='{}' from IP '{}'", user.getId(), user.getEmail(), ipAddress);
             throw new BadRequestException("Current password is incorrect.");
         }
 
@@ -209,9 +199,7 @@ public class AuthServiceImpl implements AuthService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword().trim()));
         userRepository.save(user);
 
-        auditService.logEvent(null, user.getId(), user.getEmail(), "USER_PASSWORD_CHANGED",
-                "USER", user.getId().toString(), "Password changed successfully", ipAddress);
-        log.info("Password changed successfully for user id={}, email='{}'", user.getId(), user.getEmail());
+        log.info("Password changed successfully for user id={}, email='{}' from IP '{}'", user.getId(), user.getEmail(), ipAddress);
     }
 
     private String extractClientIp(HttpServletRequest request) {
