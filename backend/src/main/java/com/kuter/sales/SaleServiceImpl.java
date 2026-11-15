@@ -1,6 +1,5 @@
 package com.kuter.sales;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.Product;
 import com.kuter.catalog.ProductRepository;
 import com.kuter.catalog.ProductStatus;
@@ -80,7 +79,6 @@ public class SaleServiceImpl implements SaleService {
     private final StockMovementRepository stockMovementRepository;
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
-    private final AuditService auditService;
     private final TenantSecurityService tenantSecurityService;
     private final HttpServletRequest httpServletRequest;
     private final com.kuter.subscriptions.EntitlementService entitlementService;
@@ -852,14 +850,7 @@ public class SaleServiceImpl implements SaleService {
     }
 
     private void logAudit(String action, UUID entityId, String details) {
-        UUID tenantId = TenantContext.requireTenantId();
-        KuterUserPrincipal principal = getAuthenticatedPrincipal();
-        UUID actorId = principal != null ? principal.getUserId() : null;
-        String actorEmail = principal != null ? principal.getEmail() : "system";
-        String ip = httpServletRequest != null ? httpServletRequest.getRemoteAddr() : "127.0.0.1";
-
-        auditService.logEvent(tenantId, actorId, actorEmail, action, "SALE",
-                entityId.toString(), details, ip);
+        log.info("[SALE_OP] action={} entityId={} details={}", action, entityId, details);
     }
 
     private static class ProductSalesMetricAccumulator {
