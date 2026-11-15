@@ -1,8 +1,12 @@
 package com.kuter.onboarding;
 
-import com.kuter.audit.AuditService;
+import com.kuter.catalog.Category;
+import com.kuter.catalog.CategoryRepository;
+import com.kuter.catalog.UnitDefinition;
+import com.kuter.catalog.UnitDefinitionRepository;
 import com.kuter.common.BadRequestException;
 import com.kuter.common.ConflictException;
+import com.kuter.common.EthiopianPhoneNumberUtils;
 import com.kuter.common.PageResponse;
 import com.kuter.common.ResourceNotFoundException;
 import com.kuter.identity.KuterUserPrincipal;
@@ -13,6 +17,7 @@ import com.kuter.identity.TenantRole;
 import com.kuter.identity.User;
 import com.kuter.identity.UserRepository;
 import com.kuter.identity.UserStatus;
+import com.kuter.notification.EmailService;
 import com.kuter.onboarding.dto.ApprovalResultDto;
 import com.kuter.onboarding.dto.ApproveOnboardingDto;
 import com.kuter.onboarding.dto.CreateOnboardingRequestDto;
@@ -40,6 +45,7 @@ import org.springframework.util.StringUtils;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -60,7 +66,9 @@ public class OnboardingServiceImpl implements OnboardingService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final TenantSubscriptionRepository tenantSubscriptionRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuditService auditService;
+    private final EmailService emailService;
+    private final CategoryRepository categoryRepository;
+    private final UnitDefinitionRepository unitRepository;
 
     public OnboardingServiceImpl(TenantOnboardingRequestRepository requestRepository,
                                  TenantRepository tenantRepository,
@@ -69,7 +77,9 @@ public class OnboardingServiceImpl implements OnboardingService {
                                  SubscriptionPlanRepository subscriptionPlanRepository,
                                  TenantSubscriptionRepository tenantSubscriptionRepository,
                                  PasswordEncoder passwordEncoder,
-                                 AuditService auditService) {
+                                 EmailService emailService,
+                                 CategoryRepository categoryRepository,
+                                 UnitDefinitionRepository unitRepository) {
         this.requestRepository = requestRepository;
         this.tenantRepository = tenantRepository;
         this.userRepository = userRepository;
@@ -77,7 +87,9 @@ public class OnboardingServiceImpl implements OnboardingService {
         this.subscriptionPlanRepository = subscriptionPlanRepository;
         this.tenantSubscriptionRepository = tenantSubscriptionRepository;
         this.passwordEncoder = passwordEncoder;
-        this.auditService = auditService;
+        this.emailService = emailService;
+        this.categoryRepository = categoryRepository;
+        this.unitRepository = unitRepository;
     }
 
     @Override
@@ -86,34 +98,88 @@ public class OnboardingServiceImpl implements OnboardingService {
         String email = dto.getOwnerEmail().trim().toLowerCase();
         String shopName = dto.getShopName().trim();
 
-        // Prevent duplicate pending requests for the same applicant email
+        // 1. Check duplicate pending requests for the same applicant email
         if (requestRepository.existsByOwnerEmailIgnoreCaseAndStatus(email, OnboardingStatus.PENDING)) {
-            throw new ConflictException("A pending registration request for email '" + email + "' already exists.");
+            throw new ConflictException("A pending registration request for email '" + email + "' already exists. Please wait for administrator approval.");
+        }
+
+        // 2. Check duplicate registered user account
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw new ConflictException("An account with email '" + email + "' already exists. Please sign in to your existing account.");
+        }
+
+        // 3. Check duplicate shop name
+        if (tenantRepository.existsByNameIgnoreCase(shopName)) {
+            throw new ConflictException("A registered shop with name '" + shopName + "' already exists. Please choose a different shop name.");
+        }
+
+        // 4. Check preferred shop code if supplied
+        String preferredShopCode = null;
+        if (StringUtils.hasText(dto.getPreferredShopCode())) {
+            preferredShopCode = slugify(dto.getPreferredShopCode());
+            if (tenantRepository.existsByCodeIgnoreCase(preferredShopCode)) {
+                throw new ConflictException("The preferred shop code '" + preferredShopCode + "' is already in use. Please choose another code.");
+            }
+        }
+
+        // 5. Validate and normalize Ethiopian mobile phone number
+        String normalizedPhone = null;
+        if (StringUtils.hasText(dto.getOwnerPhone())) {
+            normalizedPhone = EthiopianPhoneNumberUtils.normalizeIfValid(dto.getOwnerPhone());
+        }
+
+        // 6. Validate password requirements
+        String passwordHash = null;
+        if (StringUtils.hasText(dto.getPassword())) {
+            if (dto.getPassword().trim().length() < 8) {
+                throw new BadRequestException("Password must be at least 8 characters long.");
+            }
+            passwordHash = passwordEncoder.encode(dto.getPassword().trim());
+        }
+
+        // 7. Validate requested subscription plan existence
+        String planCode = dto.getRequestedPlanCode().trim().toLowerCase();
+        Optional<SubscriptionPlan> planOpt = subscriptionPlanRepository.findByCode(planCode.toLowerCase());
+        if (planOpt.isEmpty()) {
+            planOpt = subscriptionPlanRepository.findByCode(planCode.toUpperCase());
+        }
+        if (planOpt.isEmpty()) {
+            planOpt = subscriptionPlanRepository.findByCode(planCode);
+        }
+        if (planOpt.isEmpty()) {
+            throw new BadRequestException("The requested subscription plan '" + planCode + "' does not exist or is inactive.");
+        }
+        SubscriptionPlan plan = planOpt.get();
+        if (!plan.isActive()) {
+            throw new BadRequestException("The requested subscription plan '" + plan.getName() + "' is currently inactive.");
         }
 
         String referenceCode = generateReferenceCode();
-        String planCode = dto.getRequestedPlanCode().trim().toLowerCase();
 
         TenantOnboardingRequest request = TenantOnboardingRequest.builder()
                 .referenceCode(referenceCode)
                 .shopName(shopName)
                 .ownerFullName(dto.getOwnerFullName().trim())
                 .ownerEmail(email)
-                .ownerPhone(dto.getOwnerPhone() != null ? dto.getOwnerPhone().trim() : null)
+                .ownerPhone(normalizedPhone)
                 .requestedPlanCode(planCode)
-                .preferredShopCode(dto.getPreferredShopCode() != null ? slugify(dto.getPreferredShopCode()) : null)
+                .preferredShopCode(preferredShopCode)
                 .businessAddress(dto.getBusinessAddress() != null ? dto.getBusinessAddress().trim() : null)
-                .currency(StringUtils.hasText(dto.getCurrency()) ? dto.getCurrency().trim().toUpperCase() : "USD")
+                .currency("ETB")
                 .applicantNotes(dto.getApplicantNotes() != null ? dto.getApplicantNotes().trim() : null)
+                .passwordHash(passwordHash)
                 .status(OnboardingStatus.PENDING)
                 .build();
 
         TenantOnboardingRequest saved = requestRepository.save(request);
 
-        String ipAddress = extractClientIp(httpRequest);
-        auditService.logEvent(null, null, email, "ONBOARDING_REQUEST_SUBMITTED",
-                "ONBOARDING_REQUEST", saved.getId().toString(),
-                "Submitted request for shop: " + shopName + ", ref: " + referenceCode, ipAddress);
+        try {
+            emailService.sendRegistrationReceivedEmail(saved.getOwnerEmail(), saved.getShopName(), saved.getReferenceCode());
+            saved.setEmailSentAt(Instant.now());
+            saved = requestRepository.save(saved);
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch registration confirmation email for {}: {}", saved.getReferenceCode(), ex.getMessage());
+        }
 
         log.info("New tenant onboarding request submitted: ref={}, shop='{}', email='{}'",
                 referenceCode, shopName, email);
@@ -215,17 +281,23 @@ public class OnboardingServiceImpl implements OnboardingService {
         Optional<User> existingUserOpt = userRepository.findByEmail(ownerEmail);
         User ownerUser;
 
+        String passwordHash = StringUtils.hasText(request.getPasswordHash())
+                ? request.getPasswordHash()
+                : passwordEncoder.encode("Admin@123456");
+
         if (existingUserOpt.isPresent()) {
             ownerUser = existingUserOpt.get();
+            if (StringUtils.hasText(request.getPasswordHash())) {
+                ownerUser.setPasswordHash(request.getPasswordHash());
+                ownerUser = userRepository.save(ownerUser);
+            }
             log.info("Linking existing user '{}' as owner of new tenant '{}'", ownerEmail, tenantCode);
         } else {
-            // Default secure initial password for approved applicant
-            String temporaryPassword = "Admin@123456";
             ownerUser = User.builder()
                     .email(ownerEmail)
                     .fullName(request.getOwnerFullName())
                     .phoneNumber(request.getOwnerPhone())
-                    .passwordHash(passwordEncoder.encode(temporaryPassword))
+                    .passwordHash(passwordHash)
                     .status(UserStatus.ACTIVE)
                     .isPlatformAdmin(false)
                     .build();
@@ -242,7 +314,10 @@ public class OnboardingServiceImpl implements OnboardingService {
                 .build();
         membershipRepository.save(membership);
 
-        // 5. Create the TenantSubscription for requested plan
+        // 5. Initialize default inventory configuration (units and categories)
+        initializeDefaultInventoryConfiguration(tenant.getId());
+
+        // 6. Create the TenantSubscription for requested plan
         Optional<SubscriptionPlan> planOpt = subscriptionPlanRepository.findByCode(request.getRequestedPlanCode().toLowerCase());
         if (planOpt.isEmpty()) {
             // Fallback to default starter plan
@@ -269,17 +344,25 @@ public class OnboardingServiceImpl implements OnboardingService {
         request.setReviewerNotes(dto != null ? dto.getReviewerNotes() : null);
         request.setReviewedAt(Instant.now());
         request.setCreatedTenantId(tenant.getId());
+
+        // Send approval email
+        try {
+            emailService.sendShopApprovalEmail(
+                    ownerUser.getEmail(),
+                    request.getOwnerFullName(),
+                    tenant.getName(),
+                    tenant.getCode(),
+                    "http://localhost:5173/login"
+            );
+            request.setApprovalEmailSentAt(Instant.now());
+        } catch (Exception ex) {
+            log.warn("Failed to dispatch shop approval email for {}: {}", request.getReferenceCode(), ex.getMessage());
+        }
+
         requestRepository.save(request);
 
-        // 7. Record immutable audit log
-        String ipAddress = extractClientIp(httpRequest);
-        UUID adminId = adminPrincipal != null ? adminPrincipal.getUserId() : null;
-        String adminEmail = adminPrincipal != null ? adminPrincipal.getEmail() : "system";
-
-        auditService.logEvent(tenant.getId(), adminId, adminEmail, "ONBOARDING_REQUEST_APPROVED",
-                "ONBOARDING_REQUEST", request.getId().toString(),
-                "Approved onboarding request " + request.getReferenceCode() + ", created tenant: " + tenant.getCode(),
-                ipAddress);
+        log.info("[ONBOARDING_APPROVED] requestId={} ref={} tenantCode='{}'",
+                request.getId(), request.getReferenceCode(), tenant.getCode());
 
         return ApprovalResultDto.builder()
                 .requestId(request.getId())
@@ -312,14 +395,8 @@ public class OnboardingServiceImpl implements OnboardingService {
         request.setReviewedAt(Instant.now());
         TenantOnboardingRequest updated = requestRepository.save(request);
 
-        String ipAddress = extractClientIp(httpRequest);
-        UUID adminId = adminPrincipal != null ? adminPrincipal.getUserId() : null;
-        String adminEmail = adminPrincipal != null ? adminPrincipal.getEmail() : "system";
-
-        auditService.logEvent(null, adminId, adminEmail, "ONBOARDING_REQUEST_REJECTED",
-                "ONBOARDING_REQUEST", request.getId().toString(),
-                "Rejected onboarding request " + request.getReferenceCode() + ". Reason: " + dto.getReason(),
-                ipAddress);
+        log.info("[ONBOARDING_REJECTED] requestId={} ref={} reason='{}'",
+                request.getId(), request.getReferenceCode(), dto.getReason());
 
         return mapToDetailResponse(updated);
     }
@@ -382,6 +459,34 @@ public class OnboardingServiceImpl implements OnboardingService {
                 .trim()
                 .replaceAll("\\s+", "-");
         return cleaned.length() > 50 ? cleaned.substring(0, 50) : cleaned;
+    }
+
+    private void initializeDefaultInventoryConfiguration(UUID tenantId) {
+        if (unitRepository.findAllByTenantId(tenantId).isEmpty()) {
+            List<UnitDefinition> defaultUnits = List.of(
+                    UnitDefinition.builder().tenantId(tenantId).code("PCS").name("Piece").build(),
+                    UnitDefinition.builder().tenantId(tenantId).code("BAG").name("50kg Bag").build(),
+                    UnitDefinition.builder().tenantId(tenantId).code("KG").name("Kilogram").build(),
+                    UnitDefinition.builder().tenantId(tenantId).code("MTR").name("Meter").build(),
+                    UnitDefinition.builder().tenantId(tenantId).code("SQM").name("Square Meter").build(),
+                    UnitDefinition.builder().tenantId(tenantId).code("BOX").name("Box / Carton").build(),
+                    UnitDefinition.builder().tenantId(tenantId).code("BNDL").name("Bundle").build()
+            );
+            unitRepository.saveAll(defaultUnits);
+        }
+
+        if (categoryRepository.findAllByTenantId(tenantId).isEmpty()) {
+            List<Category> defaultCategories = List.of(
+                    Category.builder().tenantId(tenantId).name("Cement & Aggregates").description("Standard cement, sand, gravel").active(true).build(),
+                    Category.builder().tenantId(tenantId).name("Steel & Reinforcement").description("Rebars, wire mesh, iron sheets").active(true).build(),
+                    Category.builder().tenantId(tenantId).name("Timber & Wood").description("Planks, poles, plywood").active(true).build(),
+                    Category.builder().tenantId(tenantId).name("Roofing & Ceilings").description("Corrugated iron sheets, gypsum, tiles").active(true).build(),
+                    Category.builder().tenantId(tenantId).name("Paints & Chemical Admixtures").description("Emulsion, gloss, waterproofers").active(true).build(),
+                    Category.builder().tenantId(tenantId).name("Plumbing & Electrical").description("Pipes, fittings, cables, switches").active(true).build(),
+                    Category.builder().tenantId(tenantId).name("Hardware & Fasteners").description("Nails, screws, hinges, tools").active(true).build()
+            );
+            categoryRepository.saveAll(defaultCategories);
+        }
     }
 
     private String extractClientIp(HttpServletRequest request) {
