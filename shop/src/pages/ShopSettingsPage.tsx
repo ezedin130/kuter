@@ -73,8 +73,7 @@ export const ShopSettingsPage: React.FC = () => {
 
   // Form Fields
   const [name, setName] = useState<string>('');
-  const [currency, setCurrency] = useState<string>('USD');
-  const [timezone, setTimezone] = useState<string>('UTC');
+  const [currency, setCurrency] = useState<string>('ETB');
   const [phone, setPhone] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [address, setAddress] = useState<string>('');
@@ -117,8 +116,7 @@ export const ShopSettingsPage: React.FC = () => {
         const t = tenantRes.data;
         setTenant(t);
         setName(t.name);
-        setCurrency(t.currency || 'USD');
-        setTimezone(t.timezone || 'UTC');
+        setCurrency(t.currency || 'ETB');
         setPhone(t.phoneNumber || '');
         setEmail(t.email || '');
         setAddress(t.address || '');
@@ -157,7 +155,7 @@ export const ShopSettingsPage: React.FC = () => {
       const res = await shopApi.updateCurrentTenant({
         name: name.trim(),
         currency: currency.trim(),
-        timezone: timezone.trim(),
+        timezone: 'UTC',
         phoneNumber: phone.trim() || undefined,
         email: email.trim() || undefined,
         address: address.trim() || undefined,
@@ -374,7 +372,7 @@ export const ShopSettingsPage: React.FC = () => {
       {error && <Alert type="error" message={error} onDismiss={() => setError(null)} />}
       {successMsg && <Alert type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1.3fr', gap: '24px', alignItems: 'start' }}>
+      <div className="settings-layout-grid">
         {/* Left Column: Shop Profile Form */}
         <div className="card">
           <h2 className="card-title" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -409,40 +407,18 @@ export const ShopSettingsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Operating Currency *</label>
-                <select
-                  className="form-select"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  disabled={!canManageSettings}
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="SAR">SAR (ر.س)</option>
-                  <option value="AED">AED (د.إ)</option>
-                  <option value="KES">KES (KSh)</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Timezone *</label>
-                <select
-                  className="form-select"
-                  value={timezone}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  disabled={!canManageSettings}
-                >
-                  <option value="UTC">UTC (Coordinated Universal Time)</option>
-                  <option value="America/New_York">America/New_York (EST)</option>
-                  <option value="Europe/London">Europe/London (GMT)</option>
-                  <option value="Asia/Riyadh">Asia/Riyadh (AST)</option>
-                  <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                  <option value="Africa/Nairobi">Africa/Nairobi (EAT)</option>
-                </select>
-              </div>
+            <div className="form-group">
+              <label className="form-label">Operating Currency</label>
+              <input
+                type="text"
+                className="form-input"
+                value="Ethiopian Birr (ETB — Br)"
+                disabled
+                readOnly
+              />
+              <span style={{ fontSize: '11.5px', color: 'var(--muted)', marginTop: '4px', display: 'block' }}>
+                All monetary balances, inventory costing, sales, and reports operate exclusively in Ethiopian Birr (ETB).
+              </span>
             </div>
 
             <div className="form-row">
@@ -451,7 +427,7 @@ export const ShopSettingsPage: React.FC = () => {
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="+1 555-020-0001"
+                  placeholder="+251 98 211 2233"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={!canManageSettings}
@@ -756,7 +732,7 @@ export const ShopSettingsPage: React.FC = () => {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                   gap: '10px',
                   maxHeight: '220px',
                   overflowY: 'auto',
@@ -867,7 +843,7 @@ export const ShopSettingsPage: React.FC = () => {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
                   gap: '10px',
                   maxHeight: '220px',
                   overflowY: 'auto',
