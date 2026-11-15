@@ -1,6 +1,5 @@
 package com.kuter.catalog;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.dto.CreateProductDto;
 import com.kuter.catalog.dto.CreateProductUnitConversionDto;
 import com.kuter.catalog.dto.ProductDetailResponse;
@@ -51,7 +50,6 @@ public class ProductServiceImpl implements ProductService {
     private final ProductUnitConversionRepository conversionRepository;
     private final StockBalanceRepository balanceRepository;
     private final StockMovementRepository movementRepository;
-    private final AuditService auditService;
     private final com.kuter.subscriptions.EntitlementService entitlementService;
 
     public ProductServiceImpl(ProductRepository productRepository,
@@ -60,7 +58,6 @@ public class ProductServiceImpl implements ProductService {
                               ProductUnitConversionRepository conversionRepository,
                               StockBalanceRepository balanceRepository,
                               StockMovementRepository movementRepository,
-                              AuditService auditService,
                               com.kuter.subscriptions.EntitlementService entitlementService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
@@ -68,7 +65,6 @@ public class ProductServiceImpl implements ProductService {
         this.conversionRepository = conversionRepository;
         this.balanceRepository = balanceRepository;
         this.movementRepository = movementRepository;
-        this.auditService = auditService;
         this.entitlementService = entitlementService;
     }
 
@@ -589,12 +585,6 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void logAudit(String action, UUID entityId, String details, KuterUserPrincipal principal, HttpServletRequest request) {
-        UUID tenantId = TenantContext.requireTenantId();
-        UUID actorId = principal != null ? principal.getUserId() : null;
-        String actorEmail = principal != null ? principal.getEmail() : "system";
-
-        String ip = request != null ? request.getRemoteAddr() : "127.0.0.1";
-        auditService.logEvent(tenantId, actorId, actorEmail, action, "PRODUCT",
-                entityId.toString(), details, ip);
+        log.info("[PRODUCT_OP] action={} entityId={} details={}", action, entityId, details);
     }
 }
