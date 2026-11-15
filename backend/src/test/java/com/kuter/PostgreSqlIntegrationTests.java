@@ -46,7 +46,7 @@ class PostgreSqlIntegrationTests {
     private com.kuter.catalog.ProductRepository productRepository;
 
     @Autowired
-    private com.kuter.audit.AuditLogRepository auditLogRepository;
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("Verify PostgreSQL database connection, Flyway migration, and SystemStatus entity query")
@@ -62,26 +62,12 @@ class PostgreSqlIntegrationTests {
     }
 
     @Test
-    @DisplayName("Verify V7 migration elements (audit log outcome and indexes) on PostgreSQL")
-    void verifyV7MigrationAuditOutcomeAndIndexesOnPostgres() {
-        com.kuter.audit.AuditLog log = com.kuter.audit.AuditLog.builder()
-                .actorEmail("system@kuterplatform.com")
-                .action("PG_TEST_ACTION")
-                .entityType("SYSTEM")
-                .entityId("SYSTEM-01")
-                .outcome("SUCCESS")
-                .details("{\"test\":\"postgres-v7\"}")
-                .ipAddress("127.0.0.1")
-                .build();
-
-        com.kuter.audit.AuditLog saved = auditLogRepository.save(log);
-        assertThat(saved.getId()).isNotNull();
-        assertThat(saved.getOutcome()).isEqualTo("SUCCESS");
-
-        Optional<com.kuter.audit.AuditLog> fetched = auditLogRepository.findById(saved.getId());
-        assertThat(fetched).isPresent();
-        assertThat(fetched.get().getAction()).isEqualTo("PG_TEST_ACTION");
-        assertThat(fetched.get().getOutcome()).isEqualTo("SUCCESS");
+    @DisplayName("Verify V11 migration successfully dropped audit_logs table from PostgreSQL")
+    void verifyV11MigrationAuditLogsTableDroppedOnPostgres() {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'audit_logs'",
+                Integer.class);
+        assertThat(count).isEqualTo(0);
     }
 
     @Test
@@ -156,5 +142,77 @@ class PostgreSqlIntegrationTests {
         assertThat(fetched).isPresent();
         assertThat(fetched.get().getName()).isEqualTo("16mm TMT Steel Rebar Bundle");
         assertThat(fetched.get().getBaseUnitId()).isEqualTo(unit.getId());
+    }
+
+    @Autowired
+    private com.kuter.lending.StockLoanRepository stockLoanRepository;
+
+    @Test
+    @DisplayName("Verify searchLoans specification works seamlessly on PostgreSQL with null parameters")
+    void verifyPostgresStockLoanSpecificationSearchWithNullParameters() {
+        String uniqueSuffix = java.util.UUID.randomUUID().toString().substring(0, 8);
+        com.kuter.tenancy.Tenant tenant = tenantRepository.save(
+                com.kuter.tenancy.Tenant.builder()
+                        .code("pg-loan-" + uniqueSuffix)
+                        .name("PG Loan Depot")
+                        .currency("ETB")
+                        .timezone("UTC")
+                        .status(com.kuter.tenancy.TenantStatus.ACTIVE)
+                        .build()
+        );
+
+        com.kuter.catalog.UnitDefinition unit = unitRepository.save(
+                com.kuter.catalog.UnitDefinition.builder()
+                        .tenantId(tenant.getId())
+                        .code("BAG")
+                        .name("Bag")
+                        .build()
+        );
+
+        com.kuter.catalog.Product prod = productRepository.save(
+                com.kuter.catalog.Product.builder()
+                        .tenantId(tenant.getId())
+                        .sku("CEM-" + uniqueSuffix)
+                        .name("Cement 50kg")
+                        .baseUnitId(unit.getId())
+                        .costPrice(new java.math.BigDecimal("10.0000"))
+                        .sellingPrice(new java.math.BigDecimal("15.0000"))
+                        .reorderThreshold(new java.math.BigDecimal("5.0000"))
+                        .status(com.kuter.catalog.ProductStatus.ACTIVE)
+                        .build()
+        );
+
+        com.kuter.lending.StockLoan loan = stockLoanRepository.save(
+                com.kuter.lending.StockLoan.builder()
+                        .tenantId(tenant.getId())
+                        .loanReference("BRW-PG-" + uniqueSuffix)
+                        .direction(com.kuter.lending.LoanDirection.BORROW)
+                        .status(com.kuter.lending.LoanStatus.ACTIVE)
+                        .counterpartyName("External PG Counterparty")
+                        .productId(prod.getId())
+                        .productSku(prod.getSku())
+                        .productName(prod.getName())
+                        .unitId(unit.getId())
+                        .unitCode(unit.getCode())
+                        .conversionFactor(java.math.BigDecimal.ONE)
+                        .initialQuantity(new java.math.BigDecimal("20.0000"))
+                        .initialBaseQuantity(new java.math.BigDecimal("20.0000"))
+                        .returnedQuantity(java.math.BigDecimal.ZERO)
+                        .returnedBaseQuantity(java.math.BigDecimal.ZERO)
+                        .outstandingBaseQuantity(new java.math.BigDecimal("20.0000"))
+                        .unitCostSnapshot(new java.math.BigDecimal("10.0000"))
+                        .transactionDate(java.time.Instant.now())
+                        .build()
+        );
+
+        // Execute searchLoans with null status and null search parameter against real PostgreSQL!
+        org.springframework.data.domain.Page<com.kuter.lending.StockLoan> page =
+                stockLoanRepository.searchLoans(tenant.getId(), com.kuter.lending.LoanDirection.BORROW, null, null,
+                        org.springframework.data.domain.PageRequest.of(0, 10, org.springframework.data.domain.Sort.by(
+                                org.springframework.data.domain.Sort.Direction.DESC, "transactionDate"
+                        )));
+
+        assertThat(page.getTotalElements()).isEqualTo(1L);
+        assertThat(page.getContent().get(0).getLoanReference()).isEqualTo("BRW-PG-" + uniqueSuffix);
     }
 }
