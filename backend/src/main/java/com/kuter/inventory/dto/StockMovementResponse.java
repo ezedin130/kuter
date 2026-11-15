@@ -31,4 +31,14 @@ public class StockMovementResponse {
     private UUID actorId;
     private String actorEmail;
     private Instant createdAt;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("unitCostSnapshot")
+    public BigDecimal getUnitCostSnapshot() {
+        return this.unitCost;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("costAtTimeOfTransaction")
+    public BigDecimal getCostAtTimeOfTransaction() {
+        return this.unitCost;
+    }
 }
