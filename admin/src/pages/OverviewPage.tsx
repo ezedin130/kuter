@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
-import { PlatformOverviewMetrics, AuditLogResponseDto, HealthResponse } from '../api/types';
+import { PlatformOverviewMetrics, HealthResponse } from '../api/types';
 import { PageHead } from '../components/PageHead';
 import { StatusBadge } from '../components/StatusBadge';
 import { AdminTab } from '../components/Sidebar';
@@ -31,7 +31,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   onNavigateTab,
 }) => {
   const [metrics, setMetrics] = useState<PlatformOverviewMetrics | null>(null);
-  const [recentLogs, setRecentLogs] = useState<AuditLogResponseDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,12 +38,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const [metricsData, logsPage] = await Promise.all([
-        apiClient.getPlatformOverview(),
-        apiClient.getAdminAuditLogs({ size: 6 }),
-      ]);
+      const metricsData = await apiClient.getPlatformOverview();
       setMetrics(metricsData);
-      setRecentLogs(logsPage.content || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load platform overview metrics.');
     } finally {
@@ -56,28 +51,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     fetchOverview();
   }, []);
 
-  const formatCurrency = (val?: number, currency = 'USD') => {
-    if (val === undefined || val === null) return '$0.00';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency,
+  const formatCurrency = (val?: number) => {
+    if (val === undefined || val === null) return 'Br 0.00';
+    return `Br ${Number(val).toLocaleString('en-US', {
       minimumFractionDigits: 2,
-    }).format(val);
-  };
-
-  const formatDate = (isoStr?: string) => {
-    if (!isoStr) return '';
-    try {
-      const date = new Date(isoStr);
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return isoStr;
-    }
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   return (
@@ -178,7 +157,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             </div>
           </div>
           <div className="metric-value">
-            {loading ? '—' : formatCurrency(metrics?.estimatedMonthlyRevenue, metrics?.currency)}
+            {loading ? '—' : formatCurrency(metrics?.estimatedMonthlyRevenue)}
           </div>
           <div className="metric-meta positive">
             <span>Commercial plan run-rate</span>
@@ -272,12 +251,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                   desc: 'Configure product quotas, staff user seats, pricing, and feature bundles.',
                   icon: <CreditCard size={18} style={{ color: '#1e557b' }} />,
                 },
-                {
-                  tab: 'audit' as AdminTab,
-                  title: 'Security Audit Logs',
-                  desc: 'Tamper-evident log of administrative mutations, approvals, and outcomes.',
-                  icon: <Shield size={18} style={{ color: 'var(--ink)' }} />,
-                },
               ].map((item) => (
                 <div
                   key={item.tab}
@@ -311,54 +284,63 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           </div>
         </div>
 
-        {/* Right Column: Recent Administrative Activity Feed */}
+        {/* Right Column: Platform System & Service Status */}
         <div className="card">
           <div className="detail-card-head">
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Shield size={16} style={{ color: 'var(--teal)' }} />
-              Recent Platform Activity
+              <Server size={16} style={{ color: 'var(--teal)' }} />
+              Platform Environment & Services
             </h3>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              style={{ fontSize: '11.5px', minHeight: '28px', padding: '0 8px' }}
-              onClick={() => onNavigateTab('audit')}
-            >
-              View Full Audit <ArrowRight size={12} />
-            </button>
+            <span className={`badge ${health?.status === 'UP' ? 'badge-success' : 'badge-warning'}`}>
+              {health?.status === 'UP' ? 'All Systems Operational' : 'Degraded / Checking'}
+            </span>
           </div>
 
-          {loading ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
-              Loading recent administrative activities...
-            </div>
-          ) : recentLogs.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>
-              No recent audit activity recorded.
-            </div>
-          ) : (
-            <div className="action-feed-list">
-              {recentLogs.map((log) => (
-                <div key={log.id} className="action-feed-item">
-                  <div className="feed-icon-wrap">
-                    <CheckCircle2 size={14} />
-                  </div>
-                  <div className="feed-content">
-                    <div className="feed-title">{log.action}</div>
-                    <div className="feed-meta">
-                      {log.actorEmail || 'System'} · {log.entityType || 'General'}
-                    </div>
-                  </div>
-                  <div className="feed-time">
-                    <StatusBadge status={log.outcome || 'SUCCESS'} size="sm" />
-                    <div style={{ fontSize: '10.5px', color: 'var(--faint)', marginTop: '4px', textAlign: 'right' }}>
-                      {formatDate(log.createdAt)}
-                    </div>
-                  </div>
+          <div style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface-subtle, #f8fafc)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Database size={18} style={{ color: 'var(--teal)' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Primary Database</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>PostgreSQL Production Store</div>
                 </div>
-              ))}
+              </div>
+              <span className="badge badge-success" style={{ fontSize: '11px' }}>
+                {health?.database || 'Connected'}
+              </span>
             </div>
-          )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface-subtle, #f8fafc)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Server size={18} style={{ color: '#1e557b' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Application Backend</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Spring Boot 3.4 API Engine</div>
+                </div>
+              </div>
+              <span className="badge badge-success" style={{ fontSize: '11px' }}>
+                {health?.environment || 'Running'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface-subtle, #f8fafc)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Layers size={18} style={{ color: 'var(--amber)' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Onboarding Backlog</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Pending shop approval queue</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                style={{ fontSize: '11.5px', minHeight: '26px', padding: '0 8px' }}
+                onClick={() => onNavigateTab('requests')}
+              >
+                {metrics?.pendingOnboardingRequests ?? 0} Pending <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
