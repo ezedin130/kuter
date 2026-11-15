@@ -49,4 +49,21 @@ public class AdminSubscriptionDetailDto {
     private Integer branchLimit;
     private Instant createdAt;
     private Instant updatedAt;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("limits")
+    public java.util.Map<String, Object> getLimits() {
+        java.util.Map<String, Object> limits = new java.util.HashMap<>();
+        limits.put("maxProducts", productLimit);
+        limits.put("maxUsers", userLimit);
+        limits.put("branchLimit", branchLimit);
+        return limits;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("usage")
+    public java.util.Map<String, Object> getUsage() {
+        java.util.Map<String, Object> usage = new java.util.HashMap<>();
+        usage.put("productCount", activeProductsCount);
+        usage.put("userCount", activeUsersCount);
+        return usage;
+    }
 }
