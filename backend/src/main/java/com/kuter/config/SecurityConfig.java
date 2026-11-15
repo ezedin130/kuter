@@ -91,16 +91,46 @@ public class SecurityConfig {
 
                 // Authorization rules
                 .authorizeHttpRequests(auth -> auth
+                        // Permit all CORS preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         // Public health and info foundation endpoints
                         .requestMatchers(HttpMethod.GET, Constants.HEALTH_ENDPOINT).permitAll()
                         .requestMatchers(HttpMethod.GET, Constants.INFO_ENDPOINT).permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/error").permitAll()
 
-                        .requestMatchers(HttpMethod.POST, Constants.API_BASE_PATH + "/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, Constants.API_BASE_PATH + "/onboarding-requests").permitAll()
-                        .requestMatchers(HttpMethod.GET, Constants.API_BASE_PATH + "/onboarding-requests/status/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, Constants.API_BASE_PATH + "/public/subscription-plans").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                Constants.API_BASE_PATH + "/auth/login",
+                                Constants.API_BASE_PATH + "/auth/login/**",
+                                "/auth/login",
+                                "/auth/login/**"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                Constants.API_BASE_PATH + "/onboarding-requests",
+                                Constants.API_BASE_PATH + "/onboarding-requests/**",
+                                Constants.API_BASE_PATH + "/onboarding/requests",
+                                Constants.API_BASE_PATH + "/onboarding/requests/**",
+                                Constants.API_BASE_PATH + "/register",
+                                Constants.API_BASE_PATH + "/register/**",
+                                "/onboarding-requests",
+                                "/onboarding-requests/**",
+                                "/register",
+                                "/register/**"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                Constants.API_BASE_PATH + "/onboarding-requests/**",
+                                Constants.API_BASE_PATH + "/onboarding/requests/**",
+                                Constants.API_BASE_PATH + "/register/**",
+                                "/onboarding-requests/**",
+                                "/register/**"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                Constants.API_BASE_PATH + "/public/subscription-plans",
+                                Constants.API_BASE_PATH + "/public/subscription-plans/**",
+                                "/public/subscription-plans",
+                                "/public/subscription-plans/**"
+                        ).permitAll()
 
                         // Swagger UI and OpenAPI Documentation
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
