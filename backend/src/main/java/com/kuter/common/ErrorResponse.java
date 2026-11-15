@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Standard error response model returned across all REST API endpoints.
@@ -32,4 +34,8 @@ public class ErrorResponse {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     @Builder.Default
     private List<String> details = new ArrayList<>();
+
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @Builder.Default
+    private Map<String, String> fieldErrors = new HashMap<>();
 }
