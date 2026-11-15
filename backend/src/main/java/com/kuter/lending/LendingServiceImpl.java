@@ -1,6 +1,5 @@
 package com.kuter.lending;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.Product;
 import com.kuter.catalog.ProductRepository;
 import com.kuter.catalog.ProductStatus;
@@ -59,7 +58,6 @@ public class LendingServiceImpl implements LendingService {
     private final ProductUnitConversionRepository conversionRepository;
     private final StockBalanceRepository balanceRepository;
     private final StockMovementRepository movementRepository;
-    private final AuditService auditService;
 
     public LendingServiceImpl(StockLoanRepository loanRepository,
                               StockLoanReturnRepository returnRepository,
@@ -67,8 +65,7 @@ public class LendingServiceImpl implements LendingService {
                               UnitDefinitionRepository unitRepository,
                               ProductUnitConversionRepository conversionRepository,
                               StockBalanceRepository balanceRepository,
-                              StockMovementRepository movementRepository,
-                              AuditService auditService) {
+                              StockMovementRepository movementRepository) {
         this.loanRepository = loanRepository;
         this.returnRepository = returnRepository;
         this.productRepository = productRepository;
@@ -76,7 +73,6 @@ public class LendingServiceImpl implements LendingService {
         this.conversionRepository = conversionRepository;
         this.balanceRepository = balanceRepository;
         this.movementRepository = movementRepository;
-        this.auditService = auditService;
     }
 
     @Override
@@ -103,11 +99,16 @@ public class LendingServiceImpl implements LendingService {
                         .tenantId(tenantId)
                         .productId(product.getId())
                         .quantityOnHand(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
-                        .averageCost(product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO)
+                        .averageCost(product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                         .build()));
 
+        BigDecimal currentOnHand = balance.getQuantityOnHand() != null ? balance.getQuantityOnHand() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP);
+        BigDecimal currentAvgCost = balance.getAverageCost() != null ? balance.getAverageCost() :
+                (product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP));
+
         // Increase physical stock for incoming borrowed inventory
-        balance.setQuantityOnHand(balance.getQuantityOnHand().add(baseQty).setScale(4, RoundingMode.HALF_UP));
+        balance.setQuantityOnHand(currentOnHand.add(baseQty).setScale(4, RoundingMode.HALF_UP));
+        balance.setAverageCost(currentAvgCost);
         balanceRepository.save(balance);
 
         String reference = "BRW-" + Year.now().getValue() + "-" + String.format("%05d", RANDOM.nextInt(100000));
@@ -133,7 +134,7 @@ public class LendingServiceImpl implements LendingService {
                 .returnedQuantity(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                 .returnedBaseQuantity(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                 .outstandingBaseQuantity(baseQty)
-                .unitCostSnapshot(balance.getAverageCost())
+                .unitCostSnapshot(currentAvgCost)
                 .transactionDate(txDate)
                 .expectedReturnDate(dto.getExpectedReturnDate())
                 .notes(StringUtils.hasText(dto.getNotes()) ? dto.getNotes().trim() : null)
@@ -149,10 +150,11 @@ public class LendingServiceImpl implements LendingService {
                 .movementType(MovementType.BORROW_RECEIPT)
                 .quantityChange(baseQty)
                 .balanceAfter(balance.getQuantityOnHand())
-                .unitCost(balance.getAverageCost())
+                .unitCost(currentAvgCost)
                 .referenceId(savedLoan.getId())
                 .referenceType("STOCK_LOAN")
                 .notes("Borrowed " + dto.getQuantity() + " " + unit.getCode() + " from " + dto.getCounterpartyName())
+                .actorId(principal != null ? principal.getUserId() : null)
                 .build();
         movementRepository.save(movement);
 
@@ -198,6 +200,9 @@ public class LendingServiceImpl implements LendingService {
         String reference = "LN-" + Year.now().getValue() + "-" + String.format("%05d", RANDOM.nextInt(100000));
         Instant txDate = dto.getTransactionDate() != null ? dto.getTransactionDate() : Instant.now();
 
+        BigDecimal currentAvgCost = balance.getAverageCost() != null ? balance.getAverageCost() :
+                (product.getCostPrice() != null ? product.getCostPrice() : BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP));
+
         StockLoan loan = StockLoan.builder()
                 .tenantId(tenantId)
                 .loanReference(reference)
@@ -218,7 +223,7 @@ public class LendingServiceImpl implements LendingService {
                 .returnedQuantity(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                 .returnedBaseQuantity(BigDecimal.ZERO.setScale(4, RoundingMode.HALF_UP))
                 .outstandingBaseQuantity(baseQty)
-                .unitCostSnapshot(balance.getAverageCost())
+                .unitCostSnapshot(currentAvgCost)
                 .transactionDate(txDate)
                 .expectedReturnDate(dto.getExpectedReturnDate())
                 .notes(StringUtils.hasText(dto.getNotes()) ? dto.getNotes().trim() : null)
@@ -234,10 +239,11 @@ public class LendingServiceImpl implements LendingService {
                 .movementType(MovementType.LOAN_DISPATCH)
                 .quantityChange(baseQty.negate())
                 .balanceAfter(balance.getQuantityOnHand())
-                .unitCost(balance.getAverageCost())
+                .unitCost(currentAvgCost)
                 .referenceId(savedLoan.getId())
                 .referenceType("STOCK_LOAN")
                 .notes("Loaned " + dto.getQuantity() + " " + unit.getCode() + " to " + dto.getCounterpartyName())
+                .actorId(principal != null ? principal.getUserId() : null)
                 .build();
         movementRepository.save(movement);
 
@@ -563,10 +569,6 @@ public class LendingServiceImpl implements LendingService {
     }
 
     private void logAudit(String action, UUID entityId, String details, KuterUserPrincipal principal, HttpServletRequest request) {
-        UUID tenantId = TenantContext.requireTenantId();
-        UUID actorId = principal != null ? principal.getUserId() : null;
-        String actorEmail = principal != null ? principal.getEmail() : "system";
-        String ip = request != null ? request.getRemoteAddr() : "127.0.0.1";
-        auditService.logEvent(tenantId, actorId, actorEmail, action, "STOCK_LOAN", entityId.toString(), details, ip);
+        log.info("[STOCK_LOAN_OP] action={} entityId={} details={}", action, entityId, details);
     }
 }
