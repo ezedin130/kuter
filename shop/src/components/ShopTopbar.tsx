@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Building2, User, LogOut, KeyRound, Lock } from 'lucide-react';
+import { Building2, User, LogOut, KeyRound, Lock, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from './Modal';
 import { Alert } from './Alert';
@@ -7,9 +7,10 @@ import { shopApi } from '../api/client';
 
 interface ShopTopbarProps {
   pageTitle: string;
+  onToggleSidebar?: () => void;
 }
 
-export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle }) => {
+export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSidebar }) => {
   const { user, activeTenant, switchTenant, logout } = useAuth();
 
   // Change Password State
@@ -75,6 +76,17 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle }) => {
     <>
       <header className="shop-topbar">
         <div className="topbar-left">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              className="mobile-menu-btn"
+              onClick={onToggleSidebar}
+              title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
+            >
+              <Menu size={20} />
+            </button>
+          )}
           <h2 className="topbar-title">{pageTitle}</h2>
         </div>
 
