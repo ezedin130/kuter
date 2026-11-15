@@ -45,7 +45,7 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "currency", nullable = false, length = 10)
     @Builder.Default
-    private String currency = "USD";
+    private String currency = "ETB";
 
     @Column(name = "timezone", nullable = false, length = 50)
     @Builder.Default
