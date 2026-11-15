@@ -5,7 +5,6 @@ import {
   Building2,
   Package,
   Layers,
-  ShieldCheck,
   LogOut,
   User,
 } from 'lucide-react';
@@ -16,8 +15,7 @@ export type AdminTab =
   | 'requests'
   | 'tenants'
   | 'plans'
-  | 'subscriptions'
-  | 'audit';
+  | 'subscriptions';
 
 interface SidebarProps {
   currentTab: AdminTab;
@@ -43,7 +41,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'tenants', label: 'Shops & Tenants', icon: <Building2 size={18} /> },
     { id: 'plans', label: 'Subscription Plans', icon: <Package size={18} /> },
     { id: 'subscriptions', label: 'Tenant Subscriptions', icon: <Layers size={18} /> },
-    { id: 'audit', label: 'Platform Audit Logs', icon: <ShieldCheck size={18} /> },
   ];
 
   return (
