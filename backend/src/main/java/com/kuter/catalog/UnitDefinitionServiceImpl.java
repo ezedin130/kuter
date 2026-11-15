@@ -1,6 +1,5 @@
 package com.kuter.catalog;
 
-import com.kuter.audit.AuditService;
 import com.kuter.catalog.dto.CreateUnitDto;
 import com.kuter.catalog.dto.UnitResponse;
 import com.kuter.common.ConflictException;
@@ -37,12 +36,9 @@ public class UnitDefinitionServiceImpl implements UnitDefinitionService {
     );
 
     private final UnitDefinitionRepository unitRepository;
-    private final AuditService auditService;
 
-    public UnitDefinitionServiceImpl(UnitDefinitionRepository unitRepository,
-                                     AuditService auditService) {
+    public UnitDefinitionServiceImpl(UnitDefinitionRepository unitRepository) {
         this.unitRepository = unitRepository;
-        this.auditService = auditService;
     }
 
     @Override
@@ -116,18 +112,6 @@ public class UnitDefinitionServiceImpl implements UnitDefinitionService {
     }
 
     private void logAudit(String action, UUID entityId, String details, HttpServletRequest request) {
-        UUID tenantId = TenantContext.requireTenantId();
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        UUID actorId = null;
-        String actorEmail = "system";
-
-        if (auth != null && auth.getPrincipal() instanceof KuterUserPrincipal principal) {
-            actorId = principal.getUserId();
-            actorEmail = principal.getEmail();
-        }
-
-        String ip = request != null ? request.getRemoteAddr() : "127.0.0.1";
-        auditService.logEvent(tenantId, actorId, actorEmail, action, "UNIT_DEFINITION",
-                entityId.toString(), details, ip);
+        log.info("[UNIT_OP] action={} entityId={} details={}", action, entityId, details);
     }
 }
