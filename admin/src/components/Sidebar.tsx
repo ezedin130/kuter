@@ -9,6 +9,7 @@ import {
   User,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export type AdminTab =
   | 'overview'
@@ -29,18 +30,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingCount = 0,
 }) => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
-  const navItems: { id: AdminTab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: 'overview', label: 'Platform Overview', icon: <LayoutDashboard size={18} /> },
+  const navItems: { id: AdminTab; labelKey: 'overview' | 'requests' | 'tenants' | 'plans' | 'subscriptions'; icon: React.ReactNode; badge?: number }[] = [
+    { id: 'overview', labelKey: 'overview', icon: <LayoutDashboard size={18} /> },
     {
       id: 'requests',
-      label: 'Registration Requests',
+      labelKey: 'requests',
       icon: <ClipboardCheck size={18} />,
       badge: pendingCount > 0 ? pendingCount : undefined,
     },
-    { id: 'tenants', label: 'Shops & Tenants', icon: <Building2 size={18} /> },
-    { id: 'plans', label: 'Subscription Plans', icon: <Package size={18} /> },
-    { id: 'subscriptions', label: 'Tenant Subscriptions', icon: <Layers size={18} /> },
+    { id: 'tenants', labelKey: 'tenants', icon: <Building2 size={18} /> },
+    { id: 'plans', labelKey: 'plans', icon: <Package size={18} /> },
+    { id: 'subscriptions', labelKey: 'subscriptions', icon: <Layers size={18} /> },
   ];
 
   return (
@@ -56,7 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div>
             <div style={{ lineHeight: 1.1 }}>Kuter</div>
             <div style={{ fontSize: '11px', fontWeight: 500, opacity: 0.7, letterSpacing: '0.5px' }}>
-              Platform Admin
+              {t('sidebar.platformAdmin')}
             </div>
           </div>
         </div>
@@ -72,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className={`sidebar-link ${currentTab === item.id ? 'active' : ''}`}
           >
             <span className="sidebar-icon">{item.icon}</span>
-            <span className="sidebar-label">{item.label}</span>
+            <span className="sidebar-label">{t(`sidebar.${item.labelKey}`)}</span>
             {item.badge !== undefined && (
               <span className="sidebar-counter-badge">{item.badge}</span>
             )}
@@ -87,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <User size={16} />
           </div>
           <div className="user-text-meta">
-            <div className="user-display-name">{user?.fullName || 'Super Administrator'}</div>
+            <div className="user-display-name">{user?.fullName || t('sidebar.superAdmin')}</div>
             <div className="user-email-text" title={user?.email || 'admin@kuter.local'}>
               {user?.email || 'admin@kuter.local'}
             </div>
@@ -98,10 +100,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           type="button"
           className="btn-sidebar-logout"
           onClick={() => logout()}
-          title="Sign out of administration portal"
+          title={t('sidebar.signOut')}
         >
           <LogOut size={16} />
-          <span>Sign Out</span>
+          <span>{t('sidebar.signOut')}</span>
         </button>
       </div>
     </aside>

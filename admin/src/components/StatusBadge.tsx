@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export type BadgeTone = 'success' | 'warning' | 'danger' | 'neutral' | 'blue';
 
@@ -15,6 +16,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   tone,
   size = 'md',
 }) => {
+  const { translateStatus } = useLanguage();
+
   // Infer tone from status string if tone not explicitly supplied
   const resolveTone = (): BadgeTone => {
     if (tone) return tone;
@@ -60,7 +63,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
   };
 
   const badgeTone = resolveTone();
-  const displayLabel = label || status || 'Unknown';
+  const displayLabel = label || (status ? translateStatus(status) : '—');
 
   const toneClass = {
     success: 'badge-success',
