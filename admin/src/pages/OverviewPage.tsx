@@ -18,6 +18,7 @@ import { PlatformOverviewMetrics, HealthResponse } from '../api/types';
 import { PageHead } from '../components/PageHead';
 import { StatusBadge } from '../components/StatusBadge';
 import { AdminTab } from '../components/Sidebar';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface OverviewPageProps {
   health: HealthResponse | null;
@@ -30,6 +31,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   loadingHealth,
   onNavigateTab,
 }) => {
+  const { t, formatCurrency, language } = useLanguage();
   const [metrics, setMetrics] = useState<PlatformOverviewMetrics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
       const metricsData = await apiClient.getPlatformOverview();
       setMetrics(metricsData);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load platform overview metrics.');
+      setError(err instanceof Error ? err.message : t('overview.failedMetrics'));
     } finally {
       setLoading(false);
     }
@@ -51,20 +53,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     fetchOverview();
   }, []);
 
-  const formatCurrency = (val?: number) => {
-    if (val === undefined || val === null) return 'Br 0.00';
-    return `Br ${Number(val).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
   return (
     <div>
       <PageHead
-        eyebrow="Platform Administration"
-        title="Platform Overview"
-        description="Global health, tenant onboarding volume, subscription status, and live operational metrics."
+        eyebrow={t('overview.eyebrow')}
+        title={t('overview.title')}
+        description={t('overview.description')}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -74,14 +68,14 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               disabled={loading}
             >
               <RefreshCw size={14} className={loading ? 'spin' : ''} />
-              <span>Refresh Metrics</span>
+              <span>{t('overview.refreshMetrics')}</span>
             </button>
             <button
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => onNavigateTab('requests')}
             >
-              Review Requests <ArrowRight size={14} />
+              {t('overview.reviewRequests')} <ArrowRight size={14} />
             </button>
           </div>
         }
@@ -92,7 +86,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           <AlertTriangle size={18} />
           <div style={{ flex: 1 }}>{error}</div>
           <button type="button" className="btn btn-secondary btn-sm" onClick={fetchOverview}>
-            Retry
+            {t('common.retry')}
           </button>
         </div>
       )}
@@ -102,7 +96,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         {/* Total Tenants */}
         <div className="metric-card" onClick={() => onNavigateTab('tenants')} role="button" tabIndex={0}>
           <div className="metric-top-row">
-            <span className="metric-label">Registered Shops</span>
+            <span className="metric-label">{t('overview.totalActiveShops')}</span>
             <div className="metric-icon-wrap">
               <Building2 size={20} />
             </div>
@@ -112,14 +106,20 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           </div>
           <div className="metric-meta positive">
             <CheckCircle2 size={13} />
-            <span>{loading ? '...' : `${metrics?.activeTenants ?? 0} active, ${metrics?.suspendedTenants ?? 0} suspended`}</span>
+            <span>
+              {loading
+                ? '...'
+                : language === 'am'
+                ? `${metrics?.activeTenants ?? 0} ንቁ፣ ${metrics?.suspendedTenants ?? 0} የታገዱ`
+                : `${metrics?.activeTenants ?? 0} active, ${metrics?.suspendedTenants ?? 0} suspended`}
+            </span>
           </div>
         </div>
 
         {/* Pending Requests */}
         <div className="metric-card" onClick={() => onNavigateTab('requests')} role="button" tabIndex={0}>
           <div className="metric-top-row">
-            <span className="metric-label">Pending Onboarding</span>
+            <span className="metric-label">{t('overview.pendingRegistrations')}</span>
             <div className="metric-icon-wrap" style={{ color: 'var(--warning)', backgroundColor: 'var(--warning-bg)' }}>
               <ClipboardCheck size={20} />
             </div>
@@ -128,14 +128,24 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             {loading ? '—' : metrics?.pendingOnboardingRequests ?? 0}
           </div>
           <div className="metric-meta warning">
-            <span>{loading ? '...' : (metrics?.pendingOnboardingRequests ?? 0) > 0 ? 'Awaiting administrator review' : 'Queue clear'}</span>
+            <span>
+              {loading
+                ? '...'
+                : (metrics?.pendingOnboardingRequests ?? 0) > 0
+                ? language === 'am'
+                  ? 'የአስተዳዳሪ ማረጋገጫ የሚጠብቁ'
+                  : 'Awaiting administrator review'
+                : language === 'am'
+                ? 'የሚጠብቅ የለም'
+                : 'Queue clear'}
+            </span>
           </div>
         </div>
 
         {/* Active Subscriptions */}
         <div className="metric-card" onClick={() => onNavigateTab('subscriptions')} role="button" tabIndex={0}>
           <div className="metric-top-row">
-            <span className="metric-label">Active Subscriptions</span>
+            <span className="metric-label">{t('overview.activeSubscriptions')}</span>
             <div className="metric-icon-wrap" style={{ color: '#1e557b', backgroundColor: '#e5f1f8' }}>
               <Layers size={20} />
             </div>
@@ -144,14 +154,20 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             {loading ? '—' : metrics?.activeSubscriptions ?? 0}
           </div>
           <div className="metric-meta">
-            <span>{loading ? '...' : `${metrics?.trialingSubscriptions ?? 0} trialing, ${metrics?.expiredSubscriptions ?? 0} expired`}</span>
+            <span>
+              {loading
+                ? '...'
+                : language === 'am'
+                ? `${metrics?.trialingSubscriptions ?? 0} በሙከራ ላይ፣ ${metrics?.expiredSubscriptions ?? 0} ጊዜው ያለፈበት`
+                : `${metrics?.trialingSubscriptions ?? 0} trialing, ${metrics?.expiredSubscriptions ?? 0} expired`}
+            </span>
           </div>
         </div>
 
         {/* Estimated MRR */}
         <div className="metric-card" onClick={() => onNavigateTab('subscriptions')} role="button" tabIndex={0}>
           <div className="metric-top-row">
-            <span className="metric-label">Estimated MRR</span>
+            <span className="metric-label">{t('overview.monthlyRevenue')}</span>
             <div className="metric-icon-wrap" style={{ color: 'var(--success)', backgroundColor: 'var(--success-bg)' }}>
               <TrendingUp size={20} />
             </div>
@@ -160,7 +176,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             {loading ? '—' : formatCurrency(metrics?.estimatedMonthlyRevenue)}
           </div>
           <div className="metric-meta positive">
-            <span>Commercial plan run-rate</span>
+            <span>{t('overview.monthlyRevenueDesc')}</span>
           </div>
         </div>
       </div>
@@ -174,34 +190,34 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
             <div className="detail-card-head">
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Server size={18} style={{ color: 'var(--teal)' }} />
-                Spring Boot REST API &amp; Database State
+                {language === 'am' ? 'የስፕሪንግ ቡት ኤፒአይ እና የዳታቤዝ ሁኔታ' : 'Spring Boot REST API & Database State'}
               </h3>
               {loadingHealth ? (
-                <StatusBadge status="PENDING" label="Checking..." size="sm" />
+                <StatusBadge status="PENDING" label={t('common.loading')} size="sm" />
               ) : health?.status === 'UP' ? (
-                <StatusBadge status="ACTIVE" label="Healthy (UP)" size="sm" />
+                <StatusBadge status="ACTIVE" label={language === 'am' ? 'በጥሩ ሁኔታ ላይ (UP)' : 'Healthy (UP)'} size="sm" />
               ) : (
-                <StatusBadge status="FAILED" label="Degraded" size="sm" />
+                <StatusBadge status="FAILED" label={language === 'am' ? 'የተስተጓጎለ' : 'Degraded'} size="sm" />
               )}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
               <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                  Database Engine
+                  {language === 'am' ? 'ዋና ዳታቤዝ' : 'Database Engine'}
                 </div>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Database size={15} style={{ color: 'var(--success)' }} />
                   {health?.database || 'PostgreSQL 18'}
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '2px' }}>
-                  Managed via Flyway V1–V7
+                  {language === 'am' ? 'በፍላይዌይ (Flyway) የተደራጀ' : 'Managed via Flyway V1–V7'}
                 </div>
               </div>
 
               <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                  Active Profile
+                  {language === 'am' ? 'የስራ አካባቢ' : 'Active Profile'}
                 </div>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--ink)', marginTop: '4px' }}>
                   {health?.environment || 'dev'}
@@ -213,14 +229,14 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
 
               <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                  API Contract State
+                  {language === 'am' ? 'የኤፒአይ ስሪት' : 'API Contract State'}
                 </div>
                 <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--teal)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Shield size={15} />
-                  Frozen v1.0.0
+                  v1.0.0
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '2px' }}>
-                  10 domain endpoint groups
+                  {language === 'am' ? '10 የጎራ አገልግሎቶች' : '10 domain endpoint groups'}
                 </div>
               </div>
             </div>
@@ -229,26 +245,26 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           {/* Platform Administration Direct Shortcuts */}
           <div className="card">
             <div className="detail-card-head">
-              <h3>Administration Hub Quick Navigation</h3>
+              <h3>{t('overview.quickShortcuts')}</h3>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
               {[
                 {
                   tab: 'requests' as AdminTab,
-                  title: 'Onboarding Review',
-                  desc: 'Inspect applicant trade information and approve new merchant yards.',
+                  title: t('sidebar.requests'),
+                  desc: t('requests.description'),
                   icon: <ClipboardCheck size={18} style={{ color: 'var(--warning)' }} />,
                 },
                 {
                   tab: 'tenants' as AdminTab,
-                  title: 'Shops & Tenants',
-                  desc: 'Direct tenant provisioning, operational status suspension, and shop settings.',
+                  title: t('sidebar.tenants'),
+                  desc: t('tenants.description'),
                   icon: <Building2 size={18} style={{ color: 'var(--teal)' }} />,
                 },
                 {
                   tab: 'plans' as AdminTab,
-                  title: 'Subscription Tiers',
-                  desc: 'Configure product quotas, staff user seats, pricing, and feature bundles.',
+                  title: t('sidebar.plans'),
+                  desc: t('plans.description'),
                   icon: <CreditCard size={18} style={{ color: '#1e557b' }} />,
                 },
               ].map((item) => (
@@ -289,10 +305,10 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           <div className="detail-card-head">
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Server size={16} style={{ color: 'var(--teal)' }} />
-              Platform Environment & Services
+              {t('overview.infrastructureHealth')}
             </h3>
             <span className={`badge ${health?.status === 'UP' ? 'badge-success' : 'badge-warning'}`}>
-              {health?.status === 'UP' ? 'All Systems Operational' : 'Degraded / Checking'}
+              {health?.status === 'UP' ? t('overview.serviceOnline') : t('overview.serviceIssue')}
             </span>
           </div>
 
@@ -301,12 +317,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Database size={18} style={{ color: 'var(--teal)' }} />
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Primary Database</div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>PostgreSQL Production Store</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>{t('overview.postgresDatabase')}</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>PostgreSQL Store</div>
                 </div>
               </div>
               <span className="badge badge-success" style={{ fontSize: '11px' }}>
-                {health?.database || 'Connected'}
+                {health?.database ? t('status.CONNECTED') : t('status.ACTIVE')}
               </span>
             </div>
 
@@ -314,12 +330,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Server size={18} style={{ color: '#1e557b' }} />
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Application Backend</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>{t('overview.springBackend')}</div>
                   <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Spring Boot 3.4 API Engine</div>
                 </div>
               </div>
               <span className="badge badge-success" style={{ fontSize: '11px' }}>
-                {health?.environment || 'Running'}
+                {health?.environment ? t('status.ACTIVE') : t('status.UP')}
               </span>
             </div>
 
@@ -327,8 +343,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Layers size={18} style={{ color: 'var(--amber)' }} />
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>Onboarding Backlog</div>
-                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>Pending shop approval queue</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)' }}>{t('overview.recentRequests')}</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{t('overview.recentRequestsDesc')}</div>
                 </div>
               </div>
               <button
@@ -337,7 +353,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
                 style={{ fontSize: '11.5px', minHeight: '26px', padding: '0 8px' }}
                 onClick={() => onNavigateTab('requests')}
               >
-                {metrics?.pendingOnboardingRequests ?? 0} Pending <ArrowRight size={12} />
+                {metrics?.pendingOnboardingRequests ?? 0} {t('common.pending')} <ArrowRight size={12} />
               </button>
             </div>
           </div>

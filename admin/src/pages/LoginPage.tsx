@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, LogIn, AlertCircle } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
+import { ShieldCheck, LogIn, AlertCircle, Languages } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login, error: authError } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -14,11 +16,11 @@ export const LoginPage: React.FC = () => {
     setLocalError(null);
 
     if (!email.trim()) {
-      setLocalError('Please enter your administrator email address.');
+      setLocalError(t('login.emailRequired'));
       return;
     }
     if (!password) {
-      setLocalError('Please enter your administrator password.');
+      setLocalError(t('login.passwordRequired'));
       return;
     }
 
@@ -26,7 +28,7 @@ export const LoginPage: React.FC = () => {
     try {
       await login(email.trim(), password);
     } catch (err: unknown) {
-      setLocalError(err instanceof Error ? err.message : 'Invalid credentials or login failed.');
+      setLocalError(err instanceof Error ? err.message : t('login.invalidCredentials'));
     } finally {
       setSubmitting(false);
     }
@@ -49,12 +51,30 @@ export const LoginPage: React.FC = () => {
         justifyContent: 'center',
         backgroundColor: 'var(--ink)',
         padding: '24px',
+        position: 'relative',
       }}
     >
+      {/* Top right language switch for login screen */}
+      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="topbar-lang-btn"
+          style={{ backgroundColor: '#183344', color: 'white', borderColor: 'rgba(255,255,255,0.2)' }}
+          title={language === 'am' ? 'Switch to English' : 'ወደ አማርኛ ቀይር'}
+        >
+          <Languages size={15} style={{ color: '#5eead4' }} />
+          <span>{language === 'am' ? 'አማርኛ' : 'English'}</span>
+          <span className="lang-code-pill" style={{ backgroundColor: '#14b8a6' }}>
+            {language === 'am' ? 'AM' : 'EN'}
+          </span>
+        </button>
+      </div>
+
       <div
         style={{
           width: '100%',
-          maxWidth: '420px',
+          maxWidth: '430px',
           backgroundColor: 'white',
           borderRadius: 'var(--radius-lg)',
           boxShadow: 'var(--shadow-lg)',
@@ -70,22 +90,24 @@ export const LoginPage: React.FC = () => {
             color: 'white',
             display: 'flex',
             alignItems: 'center',
-            gap: '14px',
+            justifyContent: 'space-between',
             borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <div className="kuter-logo-mark">
-            <span />
-            <span />
-            <span />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'white' }}>
-              Kuter Admin
-            </h1>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#9bb3c2' }}>
-              SaaS Platform Administration Console
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div className="kuter-logo-mark">
+              <span />
+              <span />
+              <span />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'white' }}>
+                {t('login.consoleTitle')}
+              </h1>
+              <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#9bb3c2' }}>
+                {t('login.consoleSubtitle')}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -93,10 +115,10 @@ export const LoginPage: React.FC = () => {
         <div style={{ padding: '28px 24px' }}>
           <div style={{ marginBottom: '20px' }}>
             <h2 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--ink)', margin: 0 }}>
-              Sign In to Platform Admin
+              {t('login.signInTitle')}
             </h2>
             <p style={{ fontSize: '13px', color: 'var(--muted)', margin: '4px 0 0 0' }}>
-              Restricted to authorized Kuter platform operators and administrators.
+              {t('login.signInSubtitle')}
             </p>
           </div>
 
@@ -123,7 +145,7 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label" htmlFor="admin-email">
-                Email Address <span className="required">*</span>
+                {t('login.emailLabel')} <span className="required">*</span>
               </label>
               <input
                 id="admin-email"
@@ -140,7 +162,7 @@ export const LoginPage: React.FC = () => {
 
             <div className="form-group" style={{ marginBottom: '22px' }}>
               <label className="form-label" htmlFor="admin-password">
-                Password <span className="required">*</span>
+                {t('login.passwordLabel')} <span className="required">*</span>
               </label>
               <input
                 id="admin-password"
@@ -161,10 +183,10 @@ export const LoginPage: React.FC = () => {
               disabled={submitting}
             >
               {submitting ? (
-                <>Authenticating...</>
+                <>{t('login.authenticating')}</>
               ) : (
                 <>
-                  <LogIn size={16} /> Sign In
+                  <LogIn size={16} /> {t('login.signInBtn')}
                 </>
               )}
             </button>
@@ -191,10 +213,10 @@ export const LoginPage: React.FC = () => {
               }}
             >
               <ShieldCheck size={14} style={{ color: 'var(--teal)' }} />
-              <span>Platform Admin Demo Credentials:</span>
+              <span>{t('login.demoTitle')}</span>
             </div>
             <p style={{ margin: '0 0 8px 0', lineHeight: 1.4 }}>
-              Click to autofill seeded credentials from the local verification suite:
+              {t('login.demoHint')}
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button
@@ -203,7 +225,7 @@ export const LoginPage: React.FC = () => {
                 style={{ fontSize: '11.5px', padding: '0 8px', minHeight: '28px' }}
                 onClick={() => handleUseDemo('admin@kuterplatform.com', 'Admin@123456')}
               >
-                Super Admin
+                {t('login.superAdminBtn')}
               </button>
               <button
                 type="button"
@@ -211,7 +233,7 @@ export const LoginPage: React.FC = () => {
                 style={{ fontSize: '11.5px', padding: '0 8px', minHeight: '28px' }}
                 onClick={() => handleUseDemo('operator@kuterplatform.com', 'Admin@123456')}
               >
-                Platform Operator
+                {t('login.platformOperatorBtn')}
               </button>
             </div>
           </div>

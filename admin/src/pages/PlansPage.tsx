@@ -24,8 +24,10 @@ import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Alert } from '../components/Alert';
 import { DataTable, Column } from '../components/DataTable';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const PlansPage: React.FC = () => {
+  const { t, language } = useLanguage();
   const [plans, setPlans] = useState<SubscriptionPlanDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,11 +93,11 @@ export const PlansPage: React.FC = () => {
       setTotalPages(res.totalPages || 1);
       setTotalElements(res.totalElements || 0);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to retrieve subscription plans.');
+      setError(err instanceof Error ? err.message : (language === 'am' ? 'የደንበኝነት እቅዶችን ማምጣት አልተቻለም።' : 'Failed to retrieve subscription plans.'));
     } finally {
       setLoading(false);
     }
-  }, [activeFilter, search, page]);
+  }, [activeFilter, search, page, language]);
 
   useEffect(() => {
     fetchPlans();
@@ -104,7 +106,10 @@ export const PlansPage: React.FC = () => {
   const handleCreatePlan = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.code.trim() || !createForm.name.trim()) {
-      setBanner({ type: 'danger', message: 'Plan code and name are required.' });
+      setBanner({
+        type: 'danger',
+        message: language === 'am' ? 'የእቅድ ኮድ እና ስም ማስገባት ግዴታ ነው።' : 'Plan code and name are required.',
+      });
       return;
     }
 
@@ -120,14 +125,14 @@ export const PlansPage: React.FC = () => {
       });
       setBanner({
         type: 'success',
-        message: `Plan "${createForm.name}" created successfully.`,
+        message: language === 'am' ? `"${createForm.name}" የተባለው እቅድ በተሳካ ሁኔታ ተፈጥሯል።` : `Plan "${createForm.name}" created successfully.`,
       });
       setShowCreateModal(false);
       await fetchPlans();
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to create subscription plan.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የደንበኝነት እቅዱን መፍጠር አልተቻለም።' : 'Failed to create subscription plan.'),
       });
     } finally {
       setActionLoading(false);
@@ -167,14 +172,14 @@ export const PlansPage: React.FC = () => {
       });
       setBanner({
         type: 'success',
-        message: `Plan "${editForm.name}" updated successfully.`,
+        message: language === 'am' ? `"${editForm.name}" የተባለው እቅድ በተሳካ ሁኔታ ተሻሽሏል።` : `Plan "${editForm.name}" updated successfully.`,
       });
       setEditingPlan(null);
       await fetchPlans();
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to update subscription plan.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የደንበኝነት እቅዱን ማሻሻል አልተቻለም።' : 'Failed to update subscription plan.'),
       });
     } finally {
       setActionLoading(false);
@@ -187,13 +192,15 @@ export const PlansPage: React.FC = () => {
       await apiClient.updatePlanStatus(plan.id, !plan.isActive);
       setBanner({
         type: 'success',
-        message: `Plan "${plan.name}" status switched to ${!plan.isActive ? 'Active' : 'Inactive'}.`,
+        message: language === 'am'
+          ? `የ"${plan.name}" ሁኔታ ወደ ${!plan.isActive ? 'ንቁ' : 'ቦዝኗል'} ተቀይሯል።`
+          : `Plan "${plan.name}" status switched to ${!plan.isActive ? 'Active' : 'Inactive'}.`,
       });
       await fetchPlans();
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to toggle plan status.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የእቅዱን ሁኔታ መቀየር አልተቻለም።' : 'Failed to toggle plan status.'),
       });
     } finally {
       setActionLoading(false);
@@ -207,14 +214,14 @@ export const PlansPage: React.FC = () => {
       await apiClient.deletePlan(deletingPlan.id);
       setBanner({
         type: 'success',
-        message: `Plan "${deletingPlan.name}" removed successfully.`,
+        message: language === 'am' ? `"${deletingPlan.name}" የተባለው እቅድ ተሰርዟል።` : `Plan "${deletingPlan.name}" removed successfully.`,
       });
       setDeletingPlan(null);
       await fetchPlans();
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to delete plan. Plans in use cannot be deleted.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'እቅዱን መሰረዝ አልተቻለም። በስራ ላይ ያሉ እቅዶች ሊሰረዙ አይችሉም።' : 'Failed to delete plan. Plans in use cannot be deleted.'),
       });
       setDeletingPlan(null);
     } finally {
@@ -223,31 +230,35 @@ export const PlansPage: React.FC = () => {
   };
 
   const formatPrice = (price: number, _currency: string, interval: BillingInterval) => {
-    return `Br ${Number(price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} / ${interval.toLowerCase()}`;
+    const formatted = Number(price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const intervalLabel = interval === 'MONTHLY'
+      ? (language === 'am' ? 'በወር' : 'month')
+      : (language === 'am' ? 'በዓመት' : 'year');
+    return `${formatted} ${t('common.currencySymbol')} / ${intervalLabel}`;
   };
 
   const columns: Column<SubscriptionPlanDto>[] = [
     {
       key: 'code',
-      header: 'Code / Slug',
+      header: t('plans.code'),
       width: '120px',
       render: (p) => <span className="mono-text">{p.code}</span>,
     },
     {
       key: 'name',
-      header: 'Plan Name',
+      header: t('plans.planName'),
       render: (p) => (
         <div>
           <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{p.name}</div>
           <div style={{ fontSize: '12px', color: 'var(--muted)', maxWidth: '280px' }}>
-            {p.description || p.featuresSummary || 'No summary'}
+            {p.description || p.featuresSummary || (language === 'am' ? 'ምንም ማጠቃለያ የለም' : 'No summary')}
           </div>
         </div>
       ),
     },
     {
       key: 'pricing',
-      header: 'Price / Interval',
+      header: `${t('plans.price')} / ${t('plans.billingInterval')}`,
       render: (p) => (
         <span style={{ fontWeight: 700, color: 'var(--ink)' }}>
           {formatPrice(p.price, p.currency, p.billingInterval)}
@@ -256,42 +267,42 @@ export const PlansPage: React.FC = () => {
     },
     {
       key: 'quotas',
-      header: 'Entitlements & Quotas',
+      header: language === 'am' ? 'ገደቦች እና ኮታዎች' : 'Entitlements & Quotas',
       render: (p) => (
         <div style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           <span>
             <Boxes size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-            {p.productLimit ? `${p.productLimit} Products` : 'Unlimited Catalog'}
+            {p.productLimit ? `${p.productLimit} ${language === 'am' ? 'ምርቶች' : 'Products'}` : (language === 'am' ? 'ያልተገደበ ካታሎግ' : 'Unlimited Catalog')}
           </span>
           <span>
             <Users size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-            {p.userLimit ? `${p.userLimit} Staff Seats` : 'Unlimited Seats'}
+            {p.userLimit ? `${p.userLimit} ${language === 'am' ? 'የሰራተኞች መቀመጫ' : 'Staff Seats'}` : (language === 'am' ? 'ያልተገደበ መቀመጫ' : 'Unlimited Seats')}
           </span>
         </div>
       ),
     },
     {
       key: 'trialDays',
-      header: 'Trial',
+      header: t('plans.trialDays'),
       render: (p) => (
         <span style={{ fontSize: '12.5px' }}>
           <Calendar size={12} style={{ verticalAlign: 'middle', marginRight: '4px', color: 'var(--muted)' }} />
-          {p.trialDays} Days
+          {p.trialDays} {language === 'am' ? 'ቀናት' : 'Days'}
         </span>
       ),
     },
     {
       key: 'visibility',
-      header: 'Directory',
+      header: t('plans.visibility'),
       render: (p) => (
         <span style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
           {p.isPublic ? (
             <>
-              <Eye size={13} style={{ color: 'var(--teal)' }} /> Public
+              <Eye size={13} style={{ color: 'var(--teal)' }} /> {t('plans.publicPlan')}
             </>
           ) : (
             <>
-              <EyeOff size={13} style={{ color: 'var(--faint)' }} /> Internal
+              <EyeOff size={13} style={{ color: 'var(--faint)' }} /> {t('plans.privatePlan')}
             </>
           )}
         </span>
@@ -299,14 +310,14 @@ export const PlansPage: React.FC = () => {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('common.status'),
       render: (p) => (
         <StatusBadge status={p.isActive ? 'ACTIVE' : 'INACTIVE'} />
       ),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('common.actions'),
       width: '140px',
       render: (p) => (
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -314,7 +325,7 @@ export const PlansPage: React.FC = () => {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => handleStartEdit(p)}
-            title="Edit subscription tier"
+            title={t('plans.edit')}
           >
             <Edit2 size={13} />
           </button>
@@ -323,7 +334,7 @@ export const PlansPage: React.FC = () => {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => handleToggleStatus(p)}
-            title={p.isActive ? 'Deactivate tier' : 'Activate tier'}
+            title={p.isActive ? t('tenants.suspend') : t('tenants.activate')}
             disabled={actionLoading}
           >
             {p.isActive ? (
@@ -338,7 +349,7 @@ export const PlansPage: React.FC = () => {
             className="btn btn-secondary btn-sm"
             style={{ color: 'var(--danger)' }}
             onClick={() => setDeletingPlan(p)}
-            title="Delete plan"
+            title={t('plans.delete')}
             disabled={actionLoading}
           >
             <Trash2 size={13} />
@@ -351,16 +362,16 @@ export const PlansPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Commercial Catalog"
-        title="Subscription Plans &amp; Tiers"
-        description="Define commercial pricing, catalog item limits, staff user seat quotas, and public visibility."
+        eyebrow={t('plans.eyebrow')}
+        title={t('plans.title')}
+        description={t('plans.description')}
         actions={
           <button
             type="button"
             className="btn btn-primary btn-sm"
             onClick={() => setShowCreateModal(true)}
           >
-            <Plus size={15} /> Create Subscription Tier
+            <Plus size={15} /> {t('plans.createPlan')}
           </button>
         }
       />
@@ -384,7 +395,7 @@ export const PlansPage: React.FC = () => {
         totalPages={totalPages}
         totalElements={totalElements}
         onPageChange={setPage}
-        searchPlaceholder="Search plans by name, code, or feature..."
+        searchPlaceholder={t('plans.searchPlaceholder')}
         searchValue={search}
         onSearchChange={(val) => {
           setSearch(val);
@@ -402,21 +413,25 @@ export const PlansPage: React.FC = () => {
                   setPage(0);
                 }}
               >
-                {st === 'ALL' ? 'All Plans' : st.charAt(0) + st.slice(1).toLowerCase()}
+                {st === 'ALL'
+                  ? t('common.all')
+                  : st === 'ACTIVE'
+                  ? t('common.active')
+                  : t('common.inactive')}
               </button>
             ))}
           </div>
         }
-        emptyTitle="No subscription plans found"
-        emptyMessage="There are currently no commercial plans matching your search criteria."
+        emptyTitle={language === 'am' ? 'ምንም የደንበኝነት እቅድ አልተገኘም' : 'No subscription plans found'}
+        emptyMessage={language === 'am' ? 'ከፍለጋ መስፈርትዎ ጋር የሚዛመድ ምንም እቅድ የለም።' : 'There are currently no commercial plans matching your search criteria.'}
         rowKey={(p) => p.id}
       />
 
       {/* Modal: Create Plan */}
       {showCreateModal && (
         <Modal
-          title="Create New Subscription Tier"
-          subtitle="Configure quota limits, pricing interval, and commercial availability"
+          title={t('plans.createTitle')}
+          subtitle={t('plans.createSubtitle')}
           onClose={() => setShowCreateModal(false)}
           maxWidth="640px"
         >
@@ -424,7 +439,7 @@ export const PlansPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-code">
-                  Plan Code Slug <span className="required">*</span>
+                  {t('plans.code')} <span className="required">*</span>
                 </label>
                 <input
                   id="plan-code"
@@ -435,18 +450,18 @@ export const PlansPage: React.FC = () => {
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, code: e.target.value }))}
                   required
                 />
-                <p className="form-help">Unique identifier lowercase, digits, hyphens (2–50 chars).</p>
+                <p className="form-help">{language === 'am' ? 'ልዩ መለያ በትንንሽ እንግሊዝኛ ፊደላት እና ሰረዝ (ከ 2–50 ፊደላት)።' : 'Unique identifier lowercase, digits, hyphens (2–50 chars).'}</p>
               </div>
 
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-name">
-                  Plan Display Name <span className="required">*</span>
+                  {t('plans.planName')} <span className="required">*</span>
                 </label>
                 <input
                   id="plan-name"
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Enterprise Tier"
+                  placeholder={language === 'am' ? 'ለምሳሌ፡ የንግድ ደረጃ' : 'e.g. Enterprise Tier'}
                   value={createForm.name}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
                   required
@@ -457,7 +472,7 @@ export const PlansPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-price">
-                  Price Amount <span className="required">*</span>
+                  {t('plans.price')} ({t('common.currencySymbol')}) <span className="required">*</span>
                 </label>
                 <input
                   id="plan-price"
@@ -473,7 +488,7 @@ export const PlansPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-interval">
-                  Billing Interval <span className="required">*</span>
+                  {t('plans.billingInterval')} <span className="required">*</span>
                 </label>
                 <select
                   id="plan-interval"
@@ -483,8 +498,8 @@ export const PlansPage: React.FC = () => {
                     setCreateForm((prev) => ({ ...prev, billingInterval: e.target.value as BillingInterval }))
                   }
                 >
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="ANNUAL">Annual</option>
+                  <option value="MONTHLY">{t('plans.monthly')}</option>
+                  <option value="ANNUAL">{t('plans.annual')}</option>
                 </select>
               </div>
             </div>
@@ -492,13 +507,13 @@ export const PlansPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-prod-limit">
-                  Catalog Product Limit
+                  {t('plans.productLimit')}
                 </label>
                 <input
                   id="plan-prod-limit"
                   type="number"
                   className="form-input"
-                  placeholder="e.g. 1000 (leave empty for unlimited)"
+                  placeholder={language === 'am' ? 'ለምሳሌ፡ 1000 (ያልተገደበ እንዲሆን ባዶ ይተውት)' : 'e.g. 1000 (leave empty for unlimited)'}
                   value={createForm.productLimit ?? ''}
                   onChange={(e) =>
                     setCreateForm((prev) => ({
@@ -511,13 +526,13 @@ export const PlansPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-user-limit">
-                  Staff User Seats Limit
+                  {t('plans.userLimit')}
                 </label>
                 <input
                   id="plan-user-limit"
                   type="number"
                   className="form-input"
-                  placeholder="e.g. 5 (leave empty for unlimited)"
+                  placeholder={language === 'am' ? 'ለምሳሌ፡ 5 (ያልተገደበ እንዲሆን ባዶ ይተውት)' : 'e.g. 5 (leave empty for unlimited)'}
                   value={createForm.userLimit ?? ''}
                   onChange={(e) =>
                     setCreateForm((prev) => ({
@@ -530,7 +545,7 @@ export const PlansPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="plan-trial-days">
-                  Trial Days
+                  {t('plans.trialDays')}
                 </label>
                 <input
                   id="plan-trial-days"
@@ -549,12 +564,12 @@ export const PlansPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="plan-desc">
-                Description / Pitch
+                {language === 'am' ? 'የእቅዱ ማብራሪያ' : 'Description / Pitch'}
               </label>
               <textarea
                 id="plan-desc"
                 className="form-textarea"
-                placeholder="Comprehensive tier suited for growing supply depots and regional branches."
+                placeholder={language === 'am' ? 'እያደጉ ላሉ የንግድ ተቋማት ተስማሚ የሆነ ጥቅል...' : 'Comprehensive tier suited for growing supply depots...'}
                 value={createForm.description}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
               />
@@ -562,7 +577,7 @@ export const PlansPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="plan-features">
-                Features Summary (Comma-separated)
+                {t('plans.formFeatures')}
               </label>
               <input
                 id="plan-features"
@@ -581,7 +596,7 @@ export const PlansPage: React.FC = () => {
                   checked={createForm.isPublic}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
                 />
-                <span>Publish to Public Pricing Directory</span>
+                <span>{language === 'am' ? 'በይፋዊ የዋጋ ዝርዝር ላይ ይታይ' : 'Publish to Public Pricing Directory'}</span>
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
@@ -590,7 +605,7 @@ export const PlansPage: React.FC = () => {
                   checked={createForm.isActive}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, isActive: e.target.checked }))}
                 />
-                <span>Active for Tenant Assignment</span>
+                <span>{language === 'am' ? 'ለንግድ ተከራይ ምደባ ንቁ ይሁን' : 'Active for Tenant Assignment'}</span>
               </label>
             </div>
 
@@ -601,14 +616,14 @@ export const PlansPage: React.FC = () => {
                 onClick={() => setShowCreateModal(false)}
                 disabled={actionLoading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Creating Plan...' : 'Create Subscription Plan'}
+                {actionLoading ? t('plans.saving') : t('plans.createPlan')}
               </button>
             </div>
           </form>
@@ -618,15 +633,15 @@ export const PlansPage: React.FC = () => {
       {/* Modal: Edit Plan */}
       {editingPlan && (
         <Modal
-          title={`Edit Plan: ${editingPlan.name}`}
-          subtitle={`Slug: ${editingPlan.code}`}
+          title={`${t('plans.editTitle')}: ${editingPlan.name}`}
+          subtitle={`${t('plans.code')}: ${editingPlan.code}`}
           onClose={() => setEditingPlan(null)}
           maxWidth="640px"
         >
           <form onSubmit={handleUpdatePlan}>
             <div className="form-group">
               <label className="form-label" htmlFor="edit-plan-name">
-                Plan Display Name <span className="required">*</span>
+                {t('plans.planName')} <span className="required">*</span>
               </label>
               <input
                 id="edit-plan-name"
@@ -641,7 +656,7 @@ export const PlansPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-plan-price">
-                  Price Amount <span className="required">*</span>
+                  {t('plans.price')} ({t('common.currencySymbol')}) <span className="required">*</span>
                 </label>
                 <input
                   id="edit-plan-price"
@@ -657,7 +672,7 @@ export const PlansPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-plan-interval">
-                  Billing Interval <span className="required">*</span>
+                  {t('plans.billingInterval')} <span className="required">*</span>
                 </label>
                 <select
                   id="edit-plan-interval"
@@ -667,8 +682,8 @@ export const PlansPage: React.FC = () => {
                     setEditForm((prev) => ({ ...prev, billingInterval: e.target.value as BillingInterval }))
                   }
                 >
-                  <option value="MONTHLY">Monthly</option>
-                  <option value="ANNUAL">Annual</option>
+                  <option value="MONTHLY">{t('plans.monthly')}</option>
+                  <option value="ANNUAL">{t('plans.annual')}</option>
                 </select>
               </div>
             </div>
@@ -676,7 +691,7 @@ export const PlansPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-prod-limit">
-                  Product Limit (Empty = Unlimited)
+                  {t('plans.productLimit')}
                 </label>
                 <input
                   id="edit-prod-limit"
@@ -694,7 +709,7 @@ export const PlansPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="edit-user-limit">
-                  User Seat Limit (Empty = Unlimited)
+                  {t('plans.userLimit')}
                 </label>
                 <input
                   id="edit-user-limit"
@@ -713,7 +728,7 @@ export const PlansPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="edit-plan-desc">
-                Description
+                {language === 'am' ? 'የእቅዱ ማብራሪያ' : 'Description'}
               </label>
               <textarea
                 id="edit-plan-desc"
@@ -725,7 +740,7 @@ export const PlansPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="edit-plan-features">
-                Features Summary
+                {t('plans.formFeatures')}
               </label>
               <input
                 id="edit-plan-features"
@@ -743,7 +758,7 @@ export const PlansPage: React.FC = () => {
                   checked={editForm.isPublic}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, isPublic: e.target.checked }))}
                 />
-                <span>Publicly Visible</span>
+                <span>{language === 'am' ? 'በይፋዊ የዋጋ ዝርዝር ላይ ይታይ' : 'Publicly Visible'}</span>
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
@@ -752,7 +767,7 @@ export const PlansPage: React.FC = () => {
                   checked={editForm.isActive}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, isActive: e.target.checked }))}
                 />
-                <span>Active</span>
+                <span>{language === 'am' ? 'ንቁ ይሁን' : 'Active'}</span>
               </label>
             </div>
 
@@ -763,14 +778,14 @@ export const PlansPage: React.FC = () => {
                 onClick={() => setEditingPlan(null)}
                 disabled={actionLoading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Saving Changes...' : 'Save Plan Changes'}
+                {actionLoading ? t('plans.saving') : t('common.save')}
               </button>
             </div>
           </form>
@@ -780,10 +795,10 @@ export const PlansPage: React.FC = () => {
       {/* Confirmation Dialog: Delete Plan */}
       <ConfirmDialog
         isOpen={!!deletingPlan}
-        title={`Delete Plan: ${deletingPlan?.name}?`}
-        message="Are you sure you want to delete this subscription plan tier? If active tenant subscriptions currently reference this tier, deletion will be rejected by backend integrity rules."
+        title={`${t('plans.delete')}: ${deletingPlan?.name}?`}
+        message={t('plans.deleteConfirmMsg')}
         tone="danger"
-        confirmLabel="Confirm Delete"
+        confirmLabel={t('plans.delete')}
         isLoading={actionLoading}
         onConfirm={handleDeletePlan}
         onCancel={() => setDeletingPlan(null)}
