@@ -16,6 +16,7 @@ function AdminShell() {
   const { isAuthenticated, isLoading } = useAuth();
   const { t } = useLanguage();
   const [currentTab, setCurrentTab] = useState<AdminTab>('overview');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loadingHealth, setLoadingHealth] = useState<boolean>(true);
   const [healthError, setHealthError] = useState<string | null>(null);
@@ -106,6 +107,8 @@ function AdminShell() {
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
         pendingCount={pendingRequestsCount}
+        isOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
       />
 
       <div className="admin-main">
@@ -115,6 +118,7 @@ function AdminShell() {
           loading={loadingHealth}
           error={healthError}
           onRefreshHealth={fetchHealth}
+          onToggleSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
 
         <main className="admin-content">

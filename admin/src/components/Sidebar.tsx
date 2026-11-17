@@ -22,15 +22,26 @@ interface SidebarProps {
   currentTab: AdminTab;
   onSelectTab: (tab: AdminTab) => void;
   pendingCount?: number;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onSelectTab,
   pendingCount = 0,
+  isOpen,
+  onClose,
 }) => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
+
+  const handleSelect = (tab: AdminTab) => {
+    onSelectTab(tab);
+    if (onClose) {
+      onClose();
+    }
+  };
 
   const navItems: { id: AdminTab; labelKey: 'overview' | 'requests' | 'tenants' | 'plans' | 'subscriptions'; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', labelKey: 'overview', icon: <LayoutDashboard size={18} /> },
@@ -46,7 +57,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="admin-sidebar">
+    <>
+      <div
+        className={`sidebar-backdrop ${isOpen ? 'open' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside className={`admin-sidebar ${isOpen ? 'open' : ''}`}>
       {/* Brand Logo Header */}
       <div className="sidebar-header">
         <div className="kuter-logo">
@@ -70,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             key={item.id}
             type="button"
-            onClick={() => onSelectTab(item.id)}
+            onClick={() => handleSelect(item.id)}
             className={`sidebar-link ${currentTab === item.id ? 'active' : ''}`}
           >
             <span className="sidebar-icon">{item.icon}</span>
@@ -107,5 +124,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </aside>
+    </>
   );
 };

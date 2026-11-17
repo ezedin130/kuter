@@ -131,6 +131,7 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
           )}
 
           <div
+            className="topbar-user-chip"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -144,8 +145,8 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
               color: 'var(--ink)',
             }}
           >
-            <User size={14} color="var(--teal)" />
-            <span>{user?.fullName}</span>
+            <User size={14} color="var(--teal)" style={{ flexShrink: 0 }} />
+            <span className="user-chip-name">{user?.fullName}</span>
             <span
               style={{
                 fontSize: '10.5px',
@@ -155,6 +156,7 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
                 borderRadius: '99px',
                 fontWeight: 700,
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
               }}
             >
               {resolveRoleLabel(activeTenant?.role)}
@@ -169,7 +171,7 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <KeyRound size={14} color="var(--teal)" />
-            <span>{t('topbar.changePassword')}</span>
+            <span className="hidden-mobile">{t('topbar.changePassword')}</span>
           </button>
 
           {/* Localization Switcher Button (Replaces Logout Button on the Top Right) */}

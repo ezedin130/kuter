@@ -25,6 +25,14 @@
   --radius-sm: 7px;
   --radius: 11px;
   --radius-lg: 18px;
+
+  /* Touch targets & responsive spacing tokens */
+  --touch-target-min: 44px;
+  --content-max-width: 1260px;
+  --breakpoint-mobile-sm: 360px;
+  --breakpoint-mobile: 640px;
+  --breakpoint-tablet: 768px;
+  --breakpoint-desktop: 1024px;
 }
 
 * {

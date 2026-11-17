@@ -1,7 +1,7 @@
 import React from 'react';
 import { StatusBadge } from './StatusBadge';
 import { HealthResponse } from '../api/types';
-import { RefreshCw, LogOut, Languages } from 'lucide-react';
+import { RefreshCw, LogOut, Languages, Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -11,6 +11,7 @@ interface HeaderProps {
   loading: boolean;
   error: string | null;
   onRefreshHealth: () => void;
+  onToggleSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,15 +20,29 @@ export const Header: React.FC<HeaderProps> = ({
   loading,
   error,
   onRefreshHealth,
+  onToggleSidebar,
 }) => {
   const { logout } = useAuth();
   const { language, toggleLanguage, t } = useLanguage();
 
   return (
     <header className="admin-topbar">
-      <div className="topbar-title-wrap">
-        <span className="topbar-breadcrumb">{t('header.platformAdministration')}</span>
-        <h1 className="topbar-title">{title}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            onClick={onToggleSidebar}
+            title={language === 'am' ? 'የአሰሳ ማውጫውን ክፈት' : 'Open Navigation Menu'}
+            aria-label={language === 'am' ? 'የአሰሳ ማውጫውን ክፈት' : 'Open Navigation Menu'}
+          >
+            <Menu size={20} />
+          </button>
+        )}
+        <div className="topbar-title-wrap">
+          <span className="topbar-breadcrumb">{t('header.platformAdministration')}</span>
+          <h1 className="topbar-title">{title}</h1>
+        </div>
       </div>
 
       <div className="topbar-meta">

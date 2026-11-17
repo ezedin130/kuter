@@ -195,149 +195,153 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Main Grid: Quick Actions + Recent Sales + Recent Movements */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
-        {/* Quick Operations Card */}
-        <div className="card">
-          <div className="card-header">
-            <h3>{t('dashboard.quickActions')}</h3>
+      {/* Operational Quick Actions */}
+      <div className="card" style={{ marginBottom: '24px' }}>
+        <div className="card-header">
+          <h2 className="card-title">{t('dashboard.quickActions')}</h2>
+        </div>
+        <div className="dashboard-quick-actions">
+          {canProcessSales && (
+            <button
+              type="button"
+              className="dashboard-action-btn"
+              onClick={() => onNavigate('sales-pos')}
+            >
+              <div className="dashboard-action-content">
+                <div className="dashboard-action-icon">
+                  <ShoppingCart size={20} />
+                </div>
+                <div className="dashboard-action-text">
+                  <span className="dashboard-action-title">{t('dashboard.recordSale')}</span>
+                  <span className="dashboard-action-desc">
+                    {language === 'am' ? 'የህንጻ እቃዎችን ፈጣን ሽያጭ መመዝገቢያ' : 'Sell building materials & generate receipt'}
+                  </span>
+                </div>
+              </div>
+              <ArrowRight size={16} color="var(--muted)" style={{ flexShrink: 0 }} />
+            </button>
+          )}
+
+          {canManageInventory && (
+            <button
+              type="button"
+              className="dashboard-action-btn"
+              onClick={() => onNavigate('receive-stock')}
+            >
+              <div className="dashboard-action-content">
+                <div className="dashboard-action-icon">
+                  <Truck size={20} />
+                </div>
+                <div className="dashboard-action-text">
+                  <span className="dashboard-action-title">{t('dashboard.receiveStock')}</span>
+                  <span className="dashboard-action-desc">
+                    {language === 'am' ? 'ከአቅራቢዎች የገቡ እቃዎችን ወደ ክምችት ማስገቢያ' : 'Record supplier delivery with cost valuation'}
+                  </span>
+                </div>
+              </div>
+              <ArrowRight size={16} color="var(--muted)" style={{ flexShrink: 0 }} />
+            </button>
+          )}
+
+          {canManageInventory && (
+            <button
+              type="button"
+              className="dashboard-action-btn"
+              onClick={() => onNavigate('adjustments')}
+            >
+              <div className="dashboard-action-content">
+                <div className="dashboard-action-icon" style={{ background: 'var(--warning-bg)', color: 'var(--warning)' }}>
+                  <AlertTriangle size={20} />
+                </div>
+                <div className="dashboard-action-text">
+                  <span className="dashboard-action-title">{t('dashboard.adjustInventory')}</span>
+                  <span className="dashboard-action-desc">
+                    {language === 'am' ? 'የእቃ ቆጠራ ልዩነት ወይም ብልሽት ማስተካከያ' : 'Correct discrepancies, damage, or shrinkage'}
+                  </span>
+                </div>
+              </div>
+              <ArrowRight size={16} color="var(--muted)" style={{ flexShrink: 0 }} />
+            </button>
+          )}
+
+          {canManageCatalog && (
+            <button
+              type="button"
+              className="dashboard-action-btn"
+              onClick={() => onNavigate('products')}
+            >
+              <div className="dashboard-action-content">
+                <div className="dashboard-action-icon">
+                  <Plus size={20} />
+                </div>
+                <div className="dashboard-action-text">
+                  <span className="dashboard-action-title">{t('products.addProduct')}</span>
+                  <span className="dashboard-action-desc">
+                    {language === 'am' ? 'አዳዲስ የህንጻ እቃዎችን ወደ ካታሎግ መጨመሪያ' : 'Define new inventory items & dual-UOM conversions'}
+                  </span>
+                </div>
+              </div>
+              <ArrowRight size={16} color="var(--muted)" style={{ flexShrink: 0 }} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Low Stock Warning Card */}
+      {lowStockItems.length > 0 && (
+        <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)', margin: 0 }}>
+              <AlertTriangle size={18} />
+              <span>{t('dashboard.lowStockAlerts')} ({lowStockCount})</span>
+            </h3>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={() => onNavigate('products')}
+            >
+              {t('dashboard.viewAll')}
+            </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {canProcessSales && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '14px 18px', textAlign: 'left', minHeight: 'auto' }}
-                onClick={() => onNavigate('sales-pos')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <ShoppingCart size={18} color="var(--teal)" />
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{t('dashboard.recordSale')}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                      {language === 'am' ? 'የህንጻ እቃዎችን ፈጣን ሽያጭ መመዝገቢያ' : 'Sell building materials & generate receipt'}
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="var(--muted)" />
-              </button>
-            )}
-
-            {canManageInventory && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '14px 18px', textAlign: 'left', minHeight: 'auto' }}
-                onClick={() => onNavigate('receive-stock')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Truck size={18} color="var(--teal)" />
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{t('dashboard.receiveStock')}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                      {language === 'am' ? 'ከአቅራቢዎች የገቡ እቃዎችን ወደ ክምችት ማስገቢያ' : 'Record supplier delivery with cost valuation'}
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="var(--muted)" />
-              </button>
-            )}
-
-            {canManageInventory && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '14px 18px', textAlign: 'left', minHeight: 'auto' }}
-                onClick={() => onNavigate('adjustments')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <AlertTriangle size={18} color="var(--warning)" />
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{t('dashboard.adjustInventory')}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                      {language === 'am' ? 'የእቃ ቆጠራ ልዩነት ወይም ብልሽት ማስተካከያ' : 'Correct discrepancies, damage, or shrinkage'}
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="var(--muted)" />
-              </button>
-            )}
-
-            {canManageCatalog && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ justifyContent: 'space-between', padding: '14px 18px', textAlign: 'left', minHeight: 'auto' }}
-                onClick={() => onNavigate('products')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Plus size={18} color="var(--teal)" />
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{t('products.addProduct')}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                      {language === 'am' ? 'አዳዲስ የህንጻ እቃዎችን ወደ ካታሎግ መጨመሪያ' : 'Define new inventory items & dual-UOM conversions'}
-                    </div>
-                  </div>
-                </div>
-                <ArrowRight size={16} color="var(--muted)" />
-              </button>
-            )}
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('products.name')}</th>
+                  <th>{t('dashboard.quantity')}</th>
+                  <th>{t('common.status')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lowStockItems.slice(0, 5).map((item) => (
+                  <tr key={item.productId}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{item.productName}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--muted)' }}>SKU: {item.productSku}</div>
+                    </td>
+                    <td style={{ fontWeight: 700, color: 'var(--danger)' }}>
+                      {item.quantityOnHand} {item.baseUnitCode}
+                    </td>
+                    <td>
+                      <StatusBadge status="LOW_STOCK" variant="stock" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        {/* Low Stock Warning Card */}
-        {lowStockItems.length > 0 && (
-          <div className="card">
-            <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)' }}>
-                <AlertTriangle size={18} />
-                <span>{t('dashboard.lowStockAlerts')} ({lowStockCount})</span>
-              </h3>
-              <button
-                type="button"
-                className="btn btn-link btn-sm"
-                onClick={() => onNavigate('products')}
-              >
-                {t('dashboard.viewAll')}
-              </button>
-            </div>
-            <div className="table-responsive">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('products.name')}</th>
-                    <th>{t('dashboard.quantity')}</th>
-                    <th>{t('common.status')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lowStockItems.slice(0, 5).map((item) => (
-                    <tr key={item.productId}>
-                      <td>
-                        <div style={{ fontWeight: 600 }}>{item.productName}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--muted)' }}>SKU: {item.productSku}</div>
-                      </td>
-                      <td style={{ fontWeight: 700, color: 'var(--danger)' }}>
-                        {item.quantityOnHand} {item.baseUnitCode}
-                      </td>
-                      <td>
-                        <StatusBadge status="LOW_STOCK" variant="stock" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
+      {/* Tables Grid: Recent Sales & Recent Movements */}
+      <div className="dashboard-tables-grid">
         {/* Recent Sales Table */}
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>{t('dashboard.recentSales')}</h3>
+            <h3 className="card-title" style={{ margin: 0 }}>{t('dashboard.recentSales')}</h3>
             <button
               type="button"
-              className="btn btn-link btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={() => onNavigate('sales-history')}
             >
               {t('dashboard.viewAll')}
@@ -380,10 +384,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         {/* Recent Stock Movements Table */}
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3>{t('dashboard.recentMovements')}</h3>
+            <h3 className="card-title" style={{ margin: 0 }}>{t('dashboard.recentMovements')}</h3>
             <button
               type="button"
-              className="btn btn-link btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={() => onNavigate('movements')}
             >
               {t('dashboard.viewAll')}

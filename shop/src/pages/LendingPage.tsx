@@ -609,7 +609,7 @@ export const LendingPage: React.FC = () => {
       {activeTab === 'obligations' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* KPI Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          <div className="stats-grid">
             <div className="card" style={{ padding: '16px' }}>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>
                 {language === 'am' ? 'ንቁ የተበደርናቸው' : 'Active Borrowings'}
@@ -1158,7 +1158,7 @@ export const LendingPage: React.FC = () => {
           }
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', background: 'var(--surface-sunken, #f8fafc)', padding: '12px', borderRadius: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', background: 'var(--surface-sunken, #f8fafc)', padding: '12px', borderRadius: '6px' }}>
               <div>
                 <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{language === 'am' ? 'አቅጣጫ' : 'Direction'}</span>
                 <div style={{ fontWeight: 700 }}>

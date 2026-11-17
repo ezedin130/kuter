@@ -287,9 +287,10 @@
 }
 
 /* Metric Cards Grid */
-.metric-grid {
+.metric-grid,
+.overview-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -487,6 +488,8 @@
 .table-responsive-wrapper {
   overflow-x: auto;
   width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
 }
 
 .kuter-data-table {
@@ -928,16 +931,69 @@
   flex-shrink: 0;
 }
 
-/* Mobile Responsiveness */
+/* Mobile Responsiveness & Drawer Navigation */
+.sidebar-backdrop {
+  display: none;
+}
+
+.mobile-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-height: var(--touch-target-min, 44px);
+  min-width: var(--touch-target-min, 44px);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--ink);
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+@media (max-width: 1024px) {
+  .metric-grid,
+  .overview-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
-  .admin-layout {
-    flex-direction: column;
+  .mobile-menu-btn {
+    display: flex;
   }
 
   .admin-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #234559;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -280px;
+    width: 270px;
+    z-index: 50;
+    transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  }
+
+  .admin-sidebar.open {
+    left: 0;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 45;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .sidebar-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .admin-topbar {
@@ -948,7 +1004,31 @@
     padding: 16px;
   }
 
+  .page-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .page-head-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .form-row,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
   .hidden-mobile {
-    display: none;
+    display: none !important;
   }
 }
+
+@media (max-width: 640px) {
+  .metric-grid,
+  .overview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
