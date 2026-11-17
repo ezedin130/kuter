@@ -23,11 +23,13 @@ import {
   RecordLoanReturnDto,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 type LendingTab = 'borrowings' | 'loans' | 'obligations';
 
 export const LendingPage: React.FC = () => {
   const { canManageLending } = useAuth();
+  const { t, formatDate, language } = useLanguage();
 
   const [activeTab, setActiveTab] = useState<LendingTab>('borrowings');
   const [borrowings, setBorrowings] = useState<StockLoanResponse[]>([]);
@@ -314,21 +316,12 @@ export const LendingPage: React.FC = () => {
     }
   };
 
-  const formatDate = (iso?: string) => {
-    if (!iso) return '—';
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
   return (
     <div>
       <PageHead
-        eyebrow="Inventory Management"
-        title="Inter-Shop Lending & Borrowing"
-        subtitle="Single-tenant tracking of inventory borrowings and loans with external counterparties and physical stock ledger integration"
+        eyebrow={language === 'am' ? 'የክምችት አስተዳደር' : 'Inventory Management'}
+        title={t.lending.title}
+        subtitle={t.lending.subtitle}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -338,7 +331,7 @@ export const LendingPage: React.FC = () => {
               disabled={isLoading}
             >
               <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-              <span>Refresh</span>
+              <span>{t.common.refresh}</span>
             </button>
             {canManageLending && (
               <>
@@ -348,7 +341,7 @@ export const LendingPage: React.FC = () => {
                   onClick={handleOpenBorrowModal}
                 >
                   <ArrowDownRight size={14} />
-                  <span>Record Borrowing</span>
+                  <span>{t.lending.recordBorrowing}</span>
                 </button>
                 <button
                   type="button"
@@ -356,7 +349,7 @@ export const LendingPage: React.FC = () => {
                   onClick={handleOpenLoanModal}
                 >
                   <ArrowUpRight size={14} />
-                  <span>Record Loan</span>
+                  <span>{t.lending.recordLoan}</span>
                 </button>
               </>
             )}
@@ -375,7 +368,7 @@ export const LendingPage: React.FC = () => {
           onClick={() => setActiveTab('borrowings')}
         >
           <ArrowDownRight size={15} />
-          <span>Incoming Borrowings (Stock In)</span>
+          <span>{language === 'am' ? 'የተበደርናቸው እቃዎች (ገቢ)' : 'Incoming Borrowings (Stock In)'}</span>
         </button>
         <button
           type="button"
@@ -383,7 +376,7 @@ export const LendingPage: React.FC = () => {
           onClick={() => setActiveTab('loans')}
         >
           <ArrowUpRight size={15} />
-          <span>Outgoing Loans (Stock Out)</span>
+          <span>{language === 'am' ? 'ያበደርናቸው እቃዎች (ወጪ)' : 'Outgoing Loans (Stock Out)'}</span>
         </button>
         <button
           type="button"
@@ -391,25 +384,25 @@ export const LendingPage: React.FC = () => {
           onClick={() => setActiveTab('obligations')}
         >
           <Layers size={15} />
-          <span>Obligations & Net Position</span>
+          <span>{language === 'am' ? 'የብድር ግዴታዎች እና አጠቃላይ ሁኔታ' : 'Obligations & Net Position'}</span>
         </button>
       </div>
 
       {/* Filter Bar (for Borrowings and Loans tabs) */}
       {activeTab !== 'obligations' && (
         <div className="filter-bar" style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <label style={{ fontSize: '13px', color: 'var(--muted)' }}>Status Filter:</label>
+          <label style={{ fontSize: '13px', color: 'var(--muted)' }}>{language === 'am' ? 'ሁኔታ አጣራ:' : 'Status Filter:'}</label>
           <select
             className="form-select"
             style={{ width: '200px', height: '36px', fontSize: '13px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All Statuses</option>
-            <option value="ACTIVE">ACTIVE (Open)</option>
-            <option value="PARTIALLY_RETURNED">PARTIALLY RETURNED</option>
-            <option value="RETURNED">RETURNED (Closed)</option>
-            <option value="CANCELLED">CANCELLED</option>
+            <option value="">{language === 'am' ? 'ሁሉም ሁኔታዎች' : 'All Statuses'}</option>
+            <option value="ACTIVE">{language === 'am' ? 'ንቁ (ክፍት)' : 'ACTIVE (Open)'}</option>
+            <option value="PARTIALLY_RETURNED">{language === 'am' ? 'በከፊል የተመለሰ' : 'PARTIALLY RETURNED'}</option>
+            <option value="RETURNED">{language === 'am' ? 'የተመለሰ (የተዘጋ)' : 'RETURNED (Closed)'}</option>
+            <option value="CANCELLED">{language === 'am' ? 'የተሰረዘ' : 'CANCELLED'}</option>
           </select>
         </div>
       )}
@@ -421,22 +414,22 @@ export const LendingPage: React.FC = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Supplying Counterparty</th>
-                  <th>Product</th>
-                  <th style={{ textAlign: 'right' }}>Initial Qty</th>
-                  <th style={{ textAlign: 'right' }}>Outstanding</th>
-                  <th>Status</th>
-                  <th>Transaction Date</th>
-                  <th>Expected Return</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th>{language === 'am' ? 'ማጣቀሻ' : 'Reference'}</th>
+                  <th>{language === 'am' ? 'አበዳሪ አጋር ሱቅ' : 'Supplying Counterparty'}</th>
+                  <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                  <th style={{ textAlign: 'right' }}>{language === 'am' ? 'የመጀመሪያ መጠን' : 'Initial Qty'}</th>
+                  <th style={{ textAlign: 'right' }}>{t.lending.outstanding}</th>
+                  <th>{t.common.status}</th>
+                  <th>{t.common.date}</th>
+                  <th>{t.lending.returnDueDate}</th>
+                  <th style={{ textAlign: 'right' }}>{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {borrowings.length === 0 ? (
                   <tr>
                     <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--muted)' }}>
-                      No incoming borrowings recorded yet.
+                      {language === 'am' ? 'ምንም የገቢ ብድር መዝገብ አልተገኘም።' : 'No incoming borrowings recorded yet.'}
                     </td>
                   </tr>
                 ) : (
@@ -474,7 +467,7 @@ export const LendingPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn-icon"
-                              title="View Details & Return History"
+                              title={language === 'am' ? 'ዝርዝር እና የመመለሻ ታሪክ ተመልከት' : 'View Details & Return History'}
                               onClick={() => setSelectedLoanForDetail(b)}
                             >
                               <Eye size={15} color="var(--teal)" />
@@ -484,7 +477,7 @@ export const LendingPage: React.FC = () => {
                                 <button
                                   type="button"
                                   className="btn-icon"
-                                  title="Return Borrowed Stock to Shop"
+                                  title={language === 'am' ? 'የተበደሩትን እቃ መልስ' : 'Return Borrowed Stock to Shop'}
                                   onClick={() => handleOpenReturnModal(b)}
                                 >
                                   <RotateCcw size={15} color="var(--primary)" />
@@ -493,7 +486,7 @@ export const LendingPage: React.FC = () => {
                                   <button
                                     type="button"
                                     className="btn-icon"
-                                    title="Cancel Unreturned Borrowing"
+                                    title={language === 'am' ? 'ያልተመለሰ ብድር ሰርዝ' : 'Cancel Unreturned Borrowing'}
                                     onClick={() => handleOpenCancelModal(b)}
                                   >
                                     <XCircle size={15} color="var(--danger)" />
@@ -520,22 +513,22 @@ export const LendingPage: React.FC = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Reference</th>
-                  <th>Borrowing Counterparty</th>
-                  <th>Product</th>
-                  <th style={{ textAlign: 'right' }}>Initial Qty</th>
-                  <th style={{ textAlign: 'right' }}>Outstanding</th>
-                  <th>Status</th>
-                  <th>Transaction Date</th>
-                  <th>Expected Return</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th>{language === 'am' ? 'ማጣቀሻ' : 'Reference'}</th>
+                  <th>{language === 'am' ? 'ተበዳሪ አጋር ሱቅ' : 'Borrowing Counterparty'}</th>
+                  <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                  <th style={{ textAlign: 'right' }}>{language === 'am' ? 'የመጀመሪያ መጠን' : 'Initial Qty'}</th>
+                  <th style={{ textAlign: 'right' }}>{t.lending.outstanding}</th>
+                  <th>{t.common.status}</th>
+                  <th>{t.common.date}</th>
+                  <th>{t.lending.returnDueDate}</th>
+                  <th style={{ textAlign: 'right' }}>{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {loans.length === 0 ? (
                   <tr>
                     <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: 'var(--muted)' }}>
-                      No outgoing loans recorded yet.
+                      {language === 'am' ? 'ምንም የወጪ ብድር መዝገብ አልተገኘም።' : 'No outgoing loans recorded yet.'}
                     </td>
                   </tr>
                 ) : (
@@ -573,7 +566,7 @@ export const LendingPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn-icon"
-                              title="View Details & Return History"
+                              title={language === 'am' ? 'ዝርዝር እና የመመለሻ ታሪክ ተመልከት' : 'View Details & Return History'}
                               onClick={() => setSelectedLoanForDetail(l)}
                             >
                               <Eye size={15} color="var(--teal)" />
@@ -583,7 +576,7 @@ export const LendingPage: React.FC = () => {
                                 <button
                                   type="button"
                                   className="btn-icon"
-                                  title="Record Return from Borrower"
+                                  title={language === 'am' ? 'ከተበዳሪው የተመለሰ እቃ መዝግብ' : 'Record Return from Borrower'}
                                   onClick={() => handleOpenReturnModal(l)}
                                 >
                                   <RotateCcw size={15} color="var(--teal)" />
@@ -592,7 +585,7 @@ export const LendingPage: React.FC = () => {
                                   <button
                                     type="button"
                                     className="btn-icon"
-                                    title="Cancel Unreturned Loan"
+                                    title={language === 'am' ? 'ያልተመለሰ ብድር ሰርዝ' : 'Cancel Unreturned Loan'}
                                     onClick={() => handleOpenCancelModal(l)}
                                   >
                                     <XCircle size={15} color="var(--danger)" />
@@ -618,28 +611,36 @@ export const LendingPage: React.FC = () => {
           {/* KPI Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Active Borrowings</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>
+                {language === 'am' ? 'ንቁ የተበደርናቸው' : 'Active Borrowings'}
+              </div>
               <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--primary)' }}>
                 {obligations?.totalActiveBorrowings ?? 0}
               </div>
             </div>
 
             <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Active Outgoing Loans</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>
+                {language === 'am' ? 'ንቁ ያበደርናቸው' : 'Active Outgoing Loans'}
+              </div>
               <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--teal)' }}>
                 {obligations?.totalActiveLoans ?? 0}
               </div>
             </div>
 
             <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Total Borrowed Units</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>
+                {language === 'am' ? 'ጠቅላላ የተበደርነው መጠን' : 'Total Borrowed Units'}
+              </div>
               <div style={{ fontSize: '24px', fontWeight: 700 }}>
                 {obligations?.totalOutstandingBorrowedBaseUnits ?? 0}
               </div>
             </div>
 
             <div className="card" style={{ padding: '16px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Total Loaned Units</div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>
+                {language === 'am' ? 'ጠቅላላ ያበደርነው መጠን' : 'Total Loaned Units'}
+              </div>
               <div style={{ fontSize: '24px', fontWeight: 700 }}>
                 {obligations?.totalOutstandingLoanedBaseUnits ?? 0}
               </div>
@@ -649,37 +650,37 @@ export const LendingPage: React.FC = () => {
           {/* Obligations by Product Table */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
-              Product Net Lending Position
+              {language === 'am' ? 'የምርት የተጣራ የብድር አቋም' : 'Product Net Lending Position'}
             </h2>
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th>Base Unit</th>
-                    <th style={{ textAlign: 'right' }}>Total Borrowed</th>
-                    <th style={{ textAlign: 'right' }}>Total Loaned</th>
-                    <th style={{ textAlign: 'center' }}>Net Position</th>
+                    <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                    <th>{language === 'am' ? 'መነሻ መለኪያ' : 'Base Unit'}</th>
+                    <th style={{ textAlign: 'right' }}>{language === 'am' ? 'ጠቅላላ የተበደርነው' : 'Total Borrowed'}</th>
+                    <th style={{ textAlign: 'right' }}>{language === 'am' ? 'ጠቅላላ ያበደርነው' : 'Total Loaned'}</th>
+                    <th style={{ textAlign: 'center' }}>{language === 'am' ? 'የተጣራ አቋም' : 'Net Position'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(!obligations?.productObligations || obligations.productObligations.length === 0) ? (
                     <tr>
                       <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--muted)' }}>
-                        No active lending obligations. All borrowed and loaned items are balanced.
+                        {language === 'am' ? 'ምንም ንቁ የብድር ግዴታ የለም። ሁሉም የተበደሩ እና የተሰጡ እቃዎች የተመጣጠኑ ናቸው።' : 'No active lending obligations. All borrowed and loaned items are balanced.'}
                       </td>
                     </tr>
                   ) : (
                     obligations.productObligations.map((po) => {
                       const net = po.netObligationBaseQuantity;
                       let badgeClass = 'badge-neutral';
-                      let badgeText = 'Balanced';
+                      let badgeText = language === 'am' ? 'የተመጣጠነ' : 'Balanced';
                       if (net > 0) {
                         badgeClass = 'badge-warning';
-                        badgeText = `We owe ${net} ${po.baseUnitCode}`;
+                        badgeText = language === 'am' ? `እዳ አለብን ${net} ${po.baseUnitCode}` : `We owe ${net} ${po.baseUnitCode}`;
                       } else if (net < 0) {
                         badgeClass = 'badge-success';
-                        badgeText = `Owed ${Math.abs(net)} ${po.baseUnitCode}`;
+                        badgeText = language === 'am' ? `ይፈለግብናል ${Math.abs(net)} ${po.baseUnitCode}` : `Owed ${Math.abs(net)} ${po.baseUnitCode}`;
                       }
 
                       return (
@@ -715,7 +716,7 @@ export const LendingPage: React.FC = () => {
       {isBorrowModalOpen && (
         <Modal
           isOpen={true}
-          title="Record Incoming Borrowing (Stock In)"
+          title={language === 'am' ? 'የገቢ ብድር መዝግብ (ክምችት ገቢ)' : 'Record Incoming Borrowing (Stock In)'}
           onClose={() => setIsBorrowModalOpen(false)}
           size="large"
           footer={
@@ -726,7 +727,7 @@ export const LendingPage: React.FC = () => {
                 onClick={() => setIsBorrowModalOpen(false)}
                 disabled={isSubmittingBorrow}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -734,7 +735,7 @@ export const LendingPage: React.FC = () => {
                 onClick={handleSubmitBorrow}
                 disabled={isSubmittingBorrow || !borrowCounterparty.trim() || borrowQuantity <= 0}
               >
-                {isSubmittingBorrow ? 'Recording...' : 'Record Borrowing'}
+                {isSubmittingBorrow ? (language === 'am' ? 'በመመዝገብ ላይ...' : 'Recording...') : t.lending.recordBorrowing}
               </button>
             </div>
           }
@@ -742,11 +743,11 @@ export const LendingPage: React.FC = () => {
           <form onSubmit={handleSubmitBorrow} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Supplying Counterparty Shop Name *</label>
+                <label className="form-label">{language === 'am' ? 'አበዳሪ አጋር ሱቅ ስም *' : 'Supplying Counterparty Shop Name *'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Simba Hardware Ltd"
+                  placeholder={language === 'am' ? 'ምሳሌ፡ ሲምባ ሃርድዌር' : 'e.g. Simba Hardware Ltd'}
                   value={borrowCounterparty}
                   onChange={(e) => setBorrowCounterparty(e.target.value)}
                   required
@@ -754,11 +755,11 @@ export const LendingPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Contact Person</label>
+                <label className="form-label">{language === 'am' ? 'ተጠሪ ሰው' : 'Contact Person'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. John Doe"
+                  placeholder={language === 'am' ? 'ምሳሌ፡ አበበ ከበደ' : 'e.g. John Doe'}
                   value={borrowContact}
                   onChange={(e) => setBorrowContact(e.target.value)}
                 />
@@ -767,22 +768,22 @@ export const LendingPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Counterparty Phone</label>
+                <label className="form-label">{language === 'am' ? 'የአጋር ስልክ ቁጥር' : 'Counterparty Phone'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="+254 700 123456"
+                  placeholder="+251 911 123456"
                   value={borrowPhone}
                   onChange={(e) => setBorrowPhone(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Counterparty Address</label>
+                <label className="form-label">{language === 'am' ? 'የአጋር አድራሻ' : 'Counterparty Address'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Plot 4B Industrial Area"
+                  placeholder={language === 'am' ? 'መርካቶ፣ ተክለሃይማኖት' : 'Plot 4B Industrial Area'}
                   value={borrowAddress}
                   onChange={(e) => setBorrowAddress(e.target.value)}
                 />
@@ -791,7 +792,7 @@ export const LendingPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Select Local Product SKU *</label>
+                <label className="form-label">{language === 'am' ? 'የአካባቢ ምርት SKU ይምረጡ *' : 'Select Local Product SKU *'}</label>
                 <select
                   className="form-select"
                   value={borrowProductId}
@@ -800,14 +801,14 @@ export const LendingPage: React.FC = () => {
                 >
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) — Base: {p.baseUnitCode}
+                      {p.name} ({p.sku}) — {language === 'am' ? 'መነሻ:' : 'Base:'} {p.baseUnitCode}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Transaction Unit *</label>
+                <label className="form-label">{language === 'am' ? 'የግብይት መለኪያ *' : 'Transaction Unit *'}</label>
                 <select
                   className="form-select"
                   value={borrowUnitId}
@@ -825,7 +826,7 @@ export const LendingPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Quantity Borrowed *</label>
+                <label className="form-label">{language === 'am' ? 'የተበደሩት መጠን *' : 'Quantity Borrowed *'}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -838,7 +839,7 @@ export const LendingPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Expected Return Date</label>
+                <label className="form-label">{t.lending.returnDueDate}</label>
                 <input
                   type="date"
                   className="form-input"
@@ -849,10 +850,10 @@ export const LendingPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Notes / Terms</label>
+              <label className="form-label">{language === 'am' ? 'ማስታወሻዎች / ውሎች' : 'Notes / Terms'}</label>
               <textarea
                 className="form-textarea"
-                placeholder="Reason for borrowing, agreed repayment conditions..."
+                placeholder={language === 'am' ? 'የመበደር ምክንያት፣ የተስማሙበት የመክፈያ ሁኔታዎች...' : 'Reason for borrowing, agreed repayment conditions...'}
                 value={borrowNotes}
                 onChange={(e) => setBorrowNotes(e.target.value)}
               />
@@ -865,7 +866,7 @@ export const LendingPage: React.FC = () => {
       {isLoanModalOpen && (
         <Modal
           isOpen={true}
-          title="Record Outgoing Loan (Stock Out)"
+          title={language === 'am' ? 'የወጪ ብድር መዝግብ (ክምችት ወጪ)' : 'Record Outgoing Loan (Stock Out)'}
           onClose={() => setIsLoanModalOpen(false)}
           size="large"
           footer={
@@ -876,7 +877,7 @@ export const LendingPage: React.FC = () => {
                 onClick={() => setIsLoanModalOpen(false)}
                 disabled={isSubmittingLoan}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -884,7 +885,7 @@ export const LendingPage: React.FC = () => {
                 onClick={handleSubmitLoan}
                 disabled={isSubmittingLoan || !loanCounterparty.trim() || loanQuantity <= 0}
               >
-                {isSubmittingLoan ? 'Recording...' : 'Record Loan'}
+                {isSubmittingLoan ? (language === 'am' ? 'በመመዝገብ ላይ...' : 'Recording...') : t.lending.recordLoan}
               </button>
             </div>
           }
@@ -892,11 +893,11 @@ export const LendingPage: React.FC = () => {
           <form onSubmit={handleSubmitLoan} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Borrowing Counterparty Shop Name *</label>
+                <label className="form-label">{language === 'am' ? 'ተበዳሪ አጋር ሱቅ ስም *' : 'Borrowing Counterparty Shop Name *'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Apex Hardware Store"
+                  placeholder={language === 'am' ? 'ምሳሌ፡ አፔክስ ሃርድዌር' : 'e.g. Apex Hardware Store'}
                   value={loanCounterparty}
                   onChange={(e) => setLoanCounterparty(e.target.value)}
                   required
@@ -904,11 +905,11 @@ export const LendingPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Contact Person</label>
+                <label className="form-label">{language === 'am' ? 'ተጠሪ ሰው' : 'Contact Person'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Mary Jane"
+                  placeholder={language === 'am' ? 'ምሳሌ፡ ሰላማዊት ታደሰ' : 'e.g. Mary Jane'}
                   value={loanContact}
                   onChange={(e) => setLoanContact(e.target.value)}
                 />
@@ -917,22 +918,22 @@ export const LendingPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Counterparty Phone</label>
+                <label className="form-label">{language === 'am' ? 'የአጋር ስልክ ቁጥር' : 'Counterparty Phone'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="+254 700 987654"
+                  placeholder="+251 911 987654"
                   value={loanPhone}
                   onChange={(e) => setLoanPhone(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Counterparty Address</label>
+                <label className="form-label">{language === 'am' ? 'የአጋር አድራሻ' : 'Counterparty Address'}</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Highway Junction, Sector 2"
+                  placeholder={language === 'am' ? 'ጎተራ፣ ዋና መንገድ' : 'Highway Junction, Sector 2'}
                   value={loanAddress}
                   onChange={(e) => setLoanAddress(e.target.value)}
                 />
@@ -941,7 +942,7 @@ export const LendingPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Select Local Product SKU *</label>
+                <label className="form-label">{language === 'am' ? 'የአካባቢ ምርት SKU ይምረጡ *' : 'Select Local Product SKU *'}</label>
                 <select
                   className="form-select"
                   value={loanProductId}
@@ -950,14 +951,14 @@ export const LendingPage: React.FC = () => {
                 >
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) — Base: {p.baseUnitCode}
+                      {p.name} ({p.sku}) — {language === 'am' ? 'መነሻ:' : 'Base:'} {p.baseUnitCode}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Transaction Unit *</label>
+                <label className="form-label">{language === 'am' ? 'የግብይት መለኪያ *' : 'Transaction Unit *'}</label>
                 <select
                   className="form-select"
                   value={loanUnitId}
@@ -975,7 +976,7 @@ export const LendingPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Quantity Loaned *</label>
+                <label className="form-label">{language === 'am' ? 'የተሰጠው የብድር መጠን *' : 'Quantity Loaned *'}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -985,11 +986,11 @@ export const LendingPage: React.FC = () => {
                   onChange={(e) => setLoanQuantity(parseFloat(e.target.value) || 0)}
                   required
                 />
-                <span className="form-hint">Physical stock will be immediately deducted upon confirmation.</span>
+                <span className="form-hint">{language === 'am' ? 'ልክ ሲረጋገጥ አካላዊ ክምችት ወዲያውኑ ይቀነሳል።' : 'Physical stock will be immediately deducted upon confirmation.'}</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Expected Return Date</label>
+                <label className="form-label">{t.lending.returnDueDate}</label>
                 <input
                   type="date"
                   className="form-input"
@@ -1000,10 +1001,10 @@ export const LendingPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Notes / Conditions</label>
+              <label className="form-label">{language === 'am' ? 'ማስታወሻዎች / ሁኔታዎች' : 'Notes / Conditions'}</label>
               <textarea
                 className="form-textarea"
-                placeholder="Lending notes, return expectations..."
+                placeholder={language === 'am' ? 'የማበደር ማስታወሻዎች፣ የመመለሻ ሁኔታዎች...' : 'Lending notes, return expectations...'}
                 value={loanNotes}
                 onChange={(e) => setLoanNotes(e.target.value)}
               />
@@ -1016,7 +1017,7 @@ export const LendingPage: React.FC = () => {
       {selectedLoanForReturn && (
         <Modal
           isOpen={true}
-          title={`Record Return — ${selectedLoanForReturn.loanReference}`}
+          title={`${language === 'am' ? 'የእቃ መመለስ መዝግብ' : 'Record Return'} — ${selectedLoanForReturn.loanReference}`}
           onClose={() => setSelectedLoanForReturn(null)}
           footer={
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -1026,7 +1027,7 @@ export const LendingPage: React.FC = () => {
                 onClick={() => setSelectedLoanForReturn(null)}
                 disabled={isSubmittingReturn}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -1034,23 +1035,30 @@ export const LendingPage: React.FC = () => {
                 onClick={handleSubmitReturn}
                 disabled={isSubmittingReturn || returnQuantity <= 0 || returnQuantity > selectedLoanForReturn.outstandingBaseQuantity}
               >
-                {isSubmittingReturn ? 'Saving Return...' : 'Confirm Return'}
+                {isSubmittingReturn ? (language === 'am' ? 'በማስቀመጥ ላይ...' : 'Saving Return...') : (language === 'am' ? 'መመለስን አረጋግጥ' : 'Confirm Return')}
               </button>
             </div>
           }
         >
           <form onSubmit={handleSubmitReturn} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ fontSize: '13px', color: 'var(--muted)', background: 'var(--surface-sunken, #f8fafc)', padding: '12px', borderRadius: '6px' }}>
-              <div>Product: <strong>{selectedLoanForReturn.productName} ({selectedLoanForReturn.productSku})</strong></div>
-              <div>Counterparty: <strong>{selectedLoanForReturn.counterpartyName}</strong></div>
-              <div>Direction: <strong>{selectedLoanForReturn.direction === 'BORROW' ? 'Returning to Supplier' : 'Receiving from Borrower'}</strong></div>
+              <div>{language === 'am' ? 'ምርት:' : 'Product:'} <strong>{selectedLoanForReturn.productName} ({selectedLoanForReturn.productSku})</strong></div>
+              <div>{language === 'am' ? 'አጋር:' : 'Counterparty:'} <strong>{selectedLoanForReturn.counterpartyName}</strong></div>
+              <div>
+                {language === 'am' ? 'አቅጣጫ:' : 'Direction:'}{' '}
+                <strong>
+                  {selectedLoanForReturn.direction === 'BORROW'
+                    ? (language === 'am' ? 'ለአቅራቢው በመመለስ ላይ' : 'Returning to Supplier')
+                    : (language === 'am' ? 'ከተበዳሪው በመረከብ ላይ' : 'Receiving from Borrower')}
+                </strong>
+              </div>
               <div style={{ marginTop: '4px', fontWeight: 700, color: 'var(--primary)' }}>
-                Outstanding Balance: {selectedLoanForReturn.outstandingBaseQuantity} {selectedLoanForReturn.unitCode}
+                {language === 'am' ? 'ቀሪ ያልተመለሰ ሚዛን:' : 'Outstanding Balance:'} {selectedLoanForReturn.outstandingBaseQuantity} {selectedLoanForReturn.unitCode}
               </div>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Return Quantity ({selectedLoanForReturn.unitCode}) *</label>
+              <label className="form-label">{language === 'am' ? 'የተመለሰው መጠን' : 'Return Quantity'} ({selectedLoanForReturn.unitCode}) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -1063,15 +1071,17 @@ export const LendingPage: React.FC = () => {
                 autoFocus
               />
               <span className="form-hint">
-                Partial returns are supported. Balance remaining after this return: {(selectedLoanForReturn.outstandingBaseQuantity - returnQuantity).toFixed(2)} {selectedLoanForReturn.unitCode}.
+                {language === 'am'
+                  ? `በከፊል መመለስ ይቻላል። ከዚህ መመለስ በኋላ የሚቀረው ሚዛን: ${(selectedLoanForReturn.outstandingBaseQuantity - returnQuantity).toFixed(2)} ${selectedLoanForReturn.unitCode}።`
+                  : `Partial returns are supported. Balance remaining after this return: ${(selectedLoanForReturn.outstandingBaseQuantity - returnQuantity).toFixed(2)} ${selectedLoanForReturn.unitCode}.`}
               </span>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Return Notes</label>
+              <label className="form-label">{language === 'am' ? 'የመመለሻ ማስታወሻ' : 'Return Notes'}</label>
               <textarea
                 className="form-textarea"
-                placeholder="Condition of returned goods, vehicle reference, delivery notes..."
+                placeholder={language === 'am' ? 'የተመለሱ እቃዎች ሁኔታ፣ የመኪና መረጃ...' : 'Condition of returned goods, vehicle reference, delivery notes...'}
                 value={returnNotes}
                 onChange={(e) => setReturnNotes(e.target.value)}
               />
@@ -1084,7 +1094,7 @@ export const LendingPage: React.FC = () => {
       {selectedLoanForCancel && (
         <Modal
           isOpen={true}
-          title={`Cancel Transaction — ${selectedLoanForCancel.loanReference}`}
+          title={`${language === 'am' ? 'ግብይት ሰርዝ' : 'Cancel Transaction'} — ${selectedLoanForCancel.loanReference}`}
           onClose={() => setSelectedLoanForCancel(null)}
           footer={
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -1094,7 +1104,7 @@ export const LendingPage: React.FC = () => {
                 onClick={() => setSelectedLoanForCancel(null)}
                 disabled={isSubmittingCancel}
               >
-                Back
+                {t.common.back}
               </button>
               <button
                 type="button"
@@ -1102,20 +1112,22 @@ export const LendingPage: React.FC = () => {
                 onClick={handleSubmitCancel}
                 disabled={isSubmittingCancel || !cancelReason.trim()}
               >
-                {isSubmittingCancel ? 'Cancelling...' : 'Confirm Cancellation'}
+                {isSubmittingCancel ? (language === 'am' ? 'በመሰረዝ ላይ...' : 'Cancelling...') : (language === 'am' ? 'ስረዛውን አረጋግጥ' : 'Confirm Cancellation')}
               </button>
             </div>
           }
         >
           <form onSubmit={handleSubmitCancel} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <p style={{ fontSize: '13px', color: 'var(--muted)' }}>
-              Cancelling this active loan or borrowing will automatically reverse the physical inventory balance back to its pre-transaction state.
+              {language === 'am'
+                ? 'ይህንን ንቁ ብድር ወይም ውሰታ መሰረዝ የአካላዊ ክምችት ሚዛኑን በራስ-ሰር ወደ ቀድሞ ሁኔታው ይመልሰዋል።'
+                : 'Cancelling this active loan or borrowing will automatically reverse the physical inventory balance back to its pre-transaction state.'}
             </p>
             <div className="form-group">
-              <label className="form-label">Cancellation Reason *</label>
+              <label className="form-label">{language === 'am' ? 'የስረዛ ምክንያት *' : 'Cancellation Reason *'}</label>
               <textarea
                 className="form-textarea"
-                placeholder="e.g. Counterparty cancelled borrowing request prior to delivery..."
+                placeholder={language === 'am' ? 'ምሳሌ፡ አጋሩ እቃው ከመድረሱ በፊት ጥያቄውን ሰርዟል...' : 'e.g. Counterparty cancelled borrowing request prior to delivery...'}
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 required
@@ -1130,7 +1142,7 @@ export const LendingPage: React.FC = () => {
       {selectedLoanForDetail && (
         <Modal
           isOpen={true}
-          title={`Lending Details — ${selectedLoanForDetail.loanReference}`}
+          title={`${language === 'am' ? 'የብድር ዝርዝር' : 'Lending Details'} — ${selectedLoanForDetail.loanReference}`}
           onClose={() => setSelectedLoanForDetail(null)}
           size="large"
           footer={
@@ -1140,7 +1152,7 @@ export const LendingPage: React.FC = () => {
                 className="btn btn-secondary"
                 onClick={() => setSelectedLoanForDetail(null)}
               >
-                Close
+                {t.common.close}
               </button>
             </div>
           }
@@ -1148,27 +1160,29 @@ export const LendingPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', background: 'var(--surface-sunken, #f8fafc)', padding: '12px', borderRadius: '6px' }}>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Direction</span>
-                <div style={{ fontWeight: 700 }}>{selectedLoanForDetail.direction}</div>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{language === 'am' ? 'አቅጣጫ' : 'Direction'}</span>
+                <div style={{ fontWeight: 700 }}>
+                  {selectedLoanForDetail.direction === 'BORROW' ? (language === 'am' ? 'የተበደርነው' : 'BORROW') : (language === 'am' ? 'ያበደርነው' : 'LOAN')}
+                </div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Status</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{t.common.status}</span>
                 <div><StatusBadge status={selectedLoanForDetail.status} /></div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Counterparty</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{t.lending.partnerShop}</span>
                 <div style={{ fontWeight: 700 }}>{selectedLoanForDetail.counterpartyName}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Product</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{language === 'am' ? 'ምርት' : 'Product'}</span>
                 <div style={{ fontWeight: 600 }}>{selectedLoanForDetail.productName} ({selectedLoanForDetail.productSku})</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Initial Quantity</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{language === 'am' ? 'የመጀመሪያ መጠን' : 'Initial Quantity'}</span>
                 <div style={{ fontWeight: 600 }}>{selectedLoanForDetail.initialQuantity} {selectedLoanForDetail.unitCode}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Outstanding</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{t.lending.outstanding}</span>
                 <div style={{ fontWeight: 700, color: 'var(--primary)' }}>
                   {selectedLoanForDetail.outstandingBaseQuantity} {selectedLoanForDetail.unitCode}
                 </div>
@@ -1177,7 +1191,7 @@ export const LendingPage: React.FC = () => {
 
             {selectedLoanForDetail.notes && (
               <div>
-                <label className="form-label">Notes</label>
+                <label className="form-label">{t.common.notes}</label>
                 <p style={{ fontSize: '13px', margin: '4px 0', color: 'var(--muted)' }}>
                   {selectedLoanForDetail.notes}
                 </p>
@@ -1187,21 +1201,21 @@ export const LendingPage: React.FC = () => {
             {/* Return Events List */}
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>
-                Return History Logs
+                {language === 'am' ? 'የመመለሻ ታሪክ መዝገብ' : 'Return History Logs'}
               </h3>
               {(!selectedLoanForDetail.returns || selectedLoanForDetail.returns.length === 0) ? (
                 <div style={{ fontSize: '12.5px', color: 'var(--muted)', fontStyle: 'italic', padding: '12px 0' }}>
-                  No returns recorded on this loan yet.
+                  {language === 'am' ? 'እስካሁን በዚህ ብድር ላይ ምንም የተመለሰ እቃ አልተመዘገበም።' : 'No returns recorded on this loan yet.'}
                 </div>
               ) : (
                 <div className="table-wrap">
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Return Date</th>
-                        <th style={{ textAlign: 'right' }}>Quantity</th>
-                        <th>Received By</th>
-                        <th>Notes</th>
+                        <th>{language === 'am' ? 'የተመለሰበት ቀን' : 'Return Date'}</th>
+                        <th style={{ textAlign: 'right' }}>{t.common.quantity}</th>
+                        <th>{language === 'am' ? 'ተቀባይ' : 'Received By'}</th>
+                        <th>{t.common.notes}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1211,7 +1225,7 @@ export const LendingPage: React.FC = () => {
                           <td style={{ textAlign: 'right', fontWeight: 600 }}>
                             {ret.quantity} {ret.unitCode}
                           </td>
-                          <td>{ret.receivedByUserName || ret.receivedByUserId || 'Staff'}</td>
+                          <td>{ret.receivedByUserName || ret.receivedByUserId || (language === 'am' ? 'ሰራተኛ' : 'Staff')}</td>
                           <td style={{ color: 'var(--muted)' }}>{ret.notes || '—'}</td>
                         </tr>
                       ))}

@@ -17,9 +17,11 @@ import {
   UpdateCategoryDto,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const CategoriesPage: React.FC = () => {
   const { canManageCatalog } = useAuth();
+  const { t, language } = useLanguage();
 
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -78,7 +80,7 @@ export const CategoriesPage: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      setFormError('Category name is required.');
+      setFormError(language === 'am' ? 'የምድብ ስም አስፈላጊ ነው።' : 'Category name is required.');
       return;
     }
 
@@ -103,30 +105,33 @@ export const CategoriesPage: React.FC = () => {
       setIsModalOpen(false);
       await fetchCategories();
     } catch (err: any) {
-      setFormError(err.message || 'Failed to save category.');
+      setFormError(err.message || (language === 'am' ? 'ምድቡን ማስቀመጥ አልተቻለም።' : 'Failed to save category.'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDelete = async (id: string, catName: string) => {
-    if (!window.confirm(`Delete category "${catName}"? Products in this category will become unassigned.`)) {
+    const confirmMsg = language === 'am'
+      ? `ምድብ "${catName}" ይሰረዝ? በዚህ ምድብ ውስጥ ያሉ ምርቶች ምድብ የሌላቸው ይሆናሉ።`
+      : `Delete category "${catName}"? Products in this category will become unassigned.`;
+    if (!window.confirm(confirmMsg)) {
       return;
     }
     try {
       await shopApi.deleteCategory(id);
       await fetchCategories();
     } catch (err: any) {
-      alert('Failed to delete category: ' + (err.message || err));
+      alert((language === 'am' ? 'ምድቡን መሰረዝ አልተቻለም: ' : 'Failed to delete category: ') + (err.message || err));
     }
   };
 
   return (
     <div>
       <PageHead
-        eyebrow="Catalog Organization"
-        title="Product Categories"
-        subtitle="Group materials into structured retail categories for fast POS counter search and valuation reports"
+        eyebrow={language === 'am' ? 'የካታሎግ አደረጃጀት' : 'Catalog Organization'}
+        title={t.categories.title}
+        subtitle={t.categories.subtitle}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -136,12 +141,12 @@ export const CategoriesPage: React.FC = () => {
               disabled={isLoading}
             >
               <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-              <span>Refresh</span>
+              <span>{t.common.refresh}</span>
             </button>
             {canManageCatalog && (
               <button type="button" className="btn btn-primary btn-sm" onClick={handleOpenAddModal}>
                 <Plus size={14} />
-                <span>Add Category</span>
+                <span>{t.categories.addCategory}</span>
               </button>
             )}
           </div>
@@ -156,13 +161,13 @@ export const CategoriesPage: React.FC = () => {
             <input
               type="text"
               className="input-search"
-              placeholder="Search categories by name..."
+              placeholder={language === 'am' ? 'ምድቦችን በስም ይፈልጉ...' : 'Search categories by name...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <button type="submit" className="btn btn-secondary btn-sm">
-            Search
+            {t.common.search}
           </button>
         </form>
 
@@ -170,24 +175,26 @@ export const CategoriesPage: React.FC = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Category Name</th>
-                <th>Description</th>
-                <th style={{ textAlign: 'center' }}>Product Count</th>
-                <th>Status</th>
-                {canManageCatalog && <th style={{ textAlign: 'right' }}>Actions</th>}
+                <th>{t.categories.name}</th>
+                <th>{t.categories.description}</th>
+                <th style={{ textAlign: 'center' }}>{t.categories.productCount}</th>
+                <th>{t.common.status}</th>
+                {canManageCatalog && <th style={{ textAlign: 'right' }}>{t.common.actions}</th>}
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    Loading categories...
+                    {t.common.loading}
                   </td>
                 </tr>
               ) : categories.length === 0 ? (
                 <tr>
                   <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    No categories created yet. Click "Add Category" to organize your inventory.
+                    {language === 'am'
+                      ? 'እስካሁን ምንም ምድቦች አልተፈጠሩም። እቃዎችዎን ለማደራጀት "ምድብ ጨምር" የሚለውን ይጫኑ።'
+                      : 'No categories created yet. Click "Add Category" to organize your inventory.'}
                   </td>
                 </tr>
               ) : (
@@ -198,7 +205,9 @@ export const CategoriesPage: React.FC = () => {
                       {cat.description || '—'}
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <span className="badge badge-neutral">{cat.productCount} items</span>
+                      <span className="badge badge-neutral">
+                        {cat.productCount} {language === 'am' ? 'እቃዎች' : 'items'}
+                      </span>
                     </td>
                     <td>
                       <StatusBadge status={cat.active ? 'ACTIVE' : 'INACTIVE'} />
@@ -209,7 +218,7 @@ export const CategoriesPage: React.FC = () => {
                           <button
                             type="button"
                             className="btn-icon"
-                            title="Edit Category"
+                            title={t.categories.editCategory}
                             onClick={() => handleOpenEditModal(cat)}
                           >
                             <Edit size={16} />
@@ -217,7 +226,7 @@ export const CategoriesPage: React.FC = () => {
                           <button
                             type="button"
                             className="btn-icon"
-                            title="Delete Category"
+                            title={t.categories.deleteCategory}
                             onClick={() => handleDelete(cat.id, cat.name)}
                           >
                             <Trash2 size={16} color="var(--danger)" />
@@ -237,7 +246,7 @@ export const CategoriesPage: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={isEditing ? 'Edit Category' : 'Create Category'}
+        title={isEditing ? t.categories.editCategory : t.categories.createCategory}
         footer={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -245,7 +254,7 @@ export const CategoriesPage: React.FC = () => {
               className="btn btn-secondary btn-sm"
               onClick={() => setIsModalOpen(false)}
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               type="button"
@@ -253,7 +262,7 @@ export const CategoriesPage: React.FC = () => {
               onClick={handleSave}
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Category'}
+              {isSaving ? (language === 'am' ? 'በማስቀመጥ ላይ...' : 'Saving...') : isEditing ? t.common.save : t.categories.createCategory}
             </button>
           </div>
         }
@@ -263,11 +272,11 @@ export const CategoriesPage: React.FC = () => {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">Category Name *</label>
+              <label className="form-label">{t.categories.name} *</label>
               <input
                 type="text"
                 className="form-input"
-                placeholder="e.g. Cement & Concrete, Steel & Rebar, Plumbing"
+                placeholder={language === 'am' ? 'ምሳሌ፡ ሲሚንቶ፣ ብረት፣ የቧንቧ እቃዎች' : 'e.g. Cement & Concrete, Steel & Rebar, Plumbing'}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -275,10 +284,10 @@ export const CategoriesPage: React.FC = () => {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Description (Optional)</label>
+              <label className="form-label">{t.categories.description} ({t.common.optional})</label>
               <textarea
                 className="form-textarea"
-                placeholder="Category notes or departmental classification..."
+                placeholder={language === 'am' ? 'የምድብ ማስታወሻዎች ወይም ምደባ...' : 'Category notes or departmental classification...'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
