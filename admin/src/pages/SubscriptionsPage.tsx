@@ -23,8 +23,10 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Alert } from '../components/Alert';
 import { DataTable, Column } from '../components/DataTable';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const SubscriptionsPage: React.FC = () => {
+  const { t, formatDate, language } = useLanguage();
   const [subscriptions, setSubscriptions] = useState<AdminSubscriptionDetailDto[]>([]);
   const [summary, setSummary] = useState<SubscriptionSummaryDto | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -86,11 +88,11 @@ export const SubscriptionsPage: React.FC = () => {
       setTotalElements(subPage.totalElements || 0);
       setSummary(sumData);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to retrieve subscriptions.');
+      setError(err instanceof Error ? err.message : (language === 'am' ? 'የደንበኝነት መረጃዎችን ማምጣት አልተቻለም።' : 'Failed to retrieve subscriptions.'));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page]);
+  }, [statusFilter, search, page, language]);
 
   useEffect(() => {
     fetchSubscriptions();
@@ -124,11 +126,17 @@ export const SubscriptionsPage: React.FC = () => {
         startTrial: assignTrial,
         trialDays: assignTrial ? assignTrialDays : undefined,
       });
-      setBanner({ type: 'success', message: 'Subscription successfully assigned to shop tenant.' });
+      setBanner({
+        type: 'success',
+        message: language === 'am' ? 'የደንበኝነት እቅዱ ለተከራዩ ሱቅ በተሳካ ሁኔታ ተመድቧል።' : 'Subscription successfully assigned to shop tenant.',
+      });
       setAssignModal(false);
       await fetchSubscriptions();
     } catch (err: unknown) {
-      setBanner({ type: 'danger', message: err instanceof Error ? err.message : 'Failed to assign subscription.' });
+      setBanner({
+        type: 'danger',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'እቅዱን መመደብ አልተቻለም።' : 'Failed to assign subscription.'),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -146,12 +154,17 @@ export const SubscriptionsPage: React.FC = () => {
       });
       setBanner({
         type: 'success',
-        message: `Subscription for "${extendTarget.tenantName}" extended by ${extendDays} days.`,
+        message: language === 'am'
+          ? `የ"${extendTarget.tenantName}" ደንበኝነት በ ${extendDays} ቀናት ተራዝሟል።`
+          : `Subscription for "${extendTarget.tenantName}" extended by ${extendDays} days.`,
       });
       setExtendTarget(null);
       await fetchSubscriptions();
     } catch (err: unknown) {
-      setBanner({ type: 'danger', message: err instanceof Error ? err.message : 'Failed to extend subscription.' });
+      setBanner({
+        type: 'danger',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'ደንበኝነቱን ማራዘም አልተቻለም።' : 'Failed to extend subscription.'),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -169,12 +182,17 @@ export const SubscriptionsPage: React.FC = () => {
       });
       setBanner({
         type: 'success',
-        message: `Subscription plan updated for "${changePlanTarget.tenantName}".`,
+        message: language === 'am'
+          ? `የ"${changePlanTarget.tenantName}" የደንበኝነት እቅድ በተሳካ ሁኔታ ተቀይሯል።`
+          : `Subscription plan updated for "${changePlanTarget.tenantName}".`,
       });
       setChangePlanTarget(null);
       await fetchSubscriptions();
     } catch (err: unknown) {
-      setBanner({ type: 'danger', message: err instanceof Error ? err.message : 'Failed to change subscription plan.' });
+      setBanner({
+        type: 'danger',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የደንበኝነት እቅዱን መቀየር አልተቻለም።' : 'Failed to change subscription plan.'),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -188,21 +206,33 @@ export const SubscriptionsPage: React.FC = () => {
     try {
       if (action === 'suspend') {
         await apiClient.suspendSubscription(sub.id, { reason: actionReason.trim() || 'Administrative suspension' });
-        setBanner({ type: 'success', message: `Subscription for "${sub.tenantName}" has been suspended.` });
+        setBanner({
+          type: 'success',
+          message: language === 'am' ? `የ"${sub.tenantName}" ደንበኝነት ታግዷል።` : `Subscription for "${sub.tenantName}" has been suspended.`,
+        });
       } else if (action === 'reactivate') {
         await apiClient.reactivateSubscription(sub.id, actionReason.trim() || undefined);
-        setBanner({ type: 'success', message: `Subscription for "${sub.tenantName}" has been reactivated.` });
+        setBanner({
+          type: 'success',
+          message: language === 'am' ? `የ"${sub.tenantName}" ደንበኝነት እንደገና ነቅቷል።` : `Subscription for "${sub.tenantName}" has been reactivated.`,
+        });
       } else if (action === 'cancel') {
         await apiClient.cancelSubscription(sub.id, {
           cancelAtPeriodEnd,
           reason: actionReason.trim() || 'Administrative cancellation',
         });
-        setBanner({ type: 'success', message: `Subscription for "${sub.tenantName}" has been cancelled.` });
+        setBanner({
+          type: 'success',
+          message: language === 'am' ? `የ"${sub.tenantName}" ደንበኝነት ተሰርዟል።` : `Subscription for "${sub.tenantName}" has been cancelled.`,
+        });
       }
       setStatusTarget(null);
       await fetchSubscriptions();
     } catch (err: unknown) {
-      setBanner({ type: 'danger', message: err instanceof Error ? err.message : 'Failed to update subscription status.' });
+      setBanner({
+        type: 'danger',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የደንበኝነቱን ሁኔታ ማሻሻል አልተቻለም።' : 'Failed to update subscription status.'),
+      });
     } finally {
       setActionLoading(false);
     }
@@ -221,28 +251,18 @@ export const SubscriptionsPage: React.FC = () => {
     }
   };
 
-  const formatDate = (isoStr?: string) => {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return isoStr;
-    }
-  };
-
   const formatPrice = (price: number, _currency: string, interval: string) => {
-    return `Br ${Number(price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} / ${interval.toLowerCase()}`;
+    const formatted = Number(price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const intervalLabel = interval.toUpperCase() === 'MONTHLY'
+      ? (language === 'am' ? 'በወር' : 'month')
+      : (language === 'am' ? 'በዓመት' : 'year');
+    return `${formatted} ${t('common.currencySymbol')} / ${intervalLabel}`;
   };
 
   const columns: Column<AdminSubscriptionDetailDto>[] = [
     {
       key: 'tenant',
-      header: 'Tenant Shop',
+      header: t('subscriptions.shop'),
       render: (s) => (
         <div>
           <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{s.tenantName}</div>
@@ -254,7 +274,7 @@ export const SubscriptionsPage: React.FC = () => {
     },
     {
       key: 'plan',
-      header: 'Assigned Tier',
+      header: t('subscriptions.plan'),
       render: (s) => (
         <div>
           <span style={{ fontWeight: 700, color: 'var(--teal)' }}>{s.planName}</span>
@@ -266,7 +286,7 @@ export const SubscriptionsPage: React.FC = () => {
     },
     {
       key: 'quotas',
-      header: 'Capacity Quotas & Resource Consumption',
+      header: language === 'am' ? 'የአቅም ገደቦች እና አጠቃቀም' : 'Capacity Quotas & Resource Consumption',
       render: (s) => {
         const prodCount = s.activeProductsCount ?? s.usage?.productCount ?? 0;
         const prodLimit = s.productLimit ?? s.limits?.maxProducts;
@@ -285,9 +305,9 @@ export const SubscriptionsPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '190px' }}>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
-                <span style={{ fontWeight: 600 }}>Products:</span>
+                <span style={{ fontWeight: 600 }}>{language === 'am' ? 'ምርቶች:' : 'Products:'}</span>
                 <span>
-                  <strong>{prodCount}</strong> / {prodLimit ? `${prodLimit} used` : 'Unlimited'}
+                  <strong>{prodCount}</strong> / {prodLimit ? `${prodLimit}` : (language === 'am' ? 'ያልተገደበ' : 'Unlimited')}
                 </span>
               </div>
               {prodLimit && (
@@ -305,9 +325,9 @@ export const SubscriptionsPage: React.FC = () => {
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '2px' }}>
-                <span style={{ fontWeight: 600 }}>Staff Accounts:</span>
+                <span style={{ fontWeight: 600 }}>{language === 'am' ? 'ሰራተኞች:' : 'Staff Accounts:'}</span>
                 <span>
-                  <strong>{userCount}</strong> / {userLimit ? `${userLimit} used` : 'Unlimited'}
+                  <strong>{userCount}</strong> / {userLimit ? `${userLimit}` : (language === 'am' ? 'ያልተገደበ' : 'Unlimited')}
                 </span>
               </div>
               {userLimit && (
@@ -328,13 +348,13 @@ export const SubscriptionsPage: React.FC = () => {
     },
     {
       key: 'status',
-      header: 'Effective Status',
+      header: t('common.status'),
       render: (s) => (
         <div>
           <StatusBadge status={s.effectiveStatus || s.status} />
           {s.cancelAtPeriodEnd && (
             <div style={{ fontSize: '10.5px', color: 'var(--warning)', fontWeight: 600, marginTop: '2px' }}>
-              Cancelling at period end
+              {language === 'am' ? 'በጊዜ ማብቂያ ላይ ይሰረዛል' : 'Cancelling at period end'}
             </div>
           )}
         </div>
@@ -342,7 +362,7 @@ export const SubscriptionsPage: React.FC = () => {
     },
     {
       key: 'daysRemaining',
-      header: 'Days Left',
+      header: language === 'am' ? 'የቀሩ ቀናት' : 'Days Left',
       render: (s) => (
         <span
           style={{
@@ -351,23 +371,23 @@ export const SubscriptionsPage: React.FC = () => {
             color: s.daysRemaining <= 7 ? 'var(--warning)' : 'var(--ink)',
           }}
         >
-          {s.daysRemaining} days
+          {s.daysRemaining} {language === 'am' ? 'ቀናት' : 'days'}
         </span>
       ),
     },
     {
       key: 'period',
-      header: 'Current Period',
+      header: language === 'am' ? 'የአሁኑ ዑደት' : 'Current Period',
       render: (s) => (
         <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-          <div>Start: {formatDate(s.currentPeriodStart)}</div>
-          <div>End: {formatDate(s.currentPeriodEnd)}</div>
+          <div>{t('subscriptions.periodStart')}: {formatDate(s.currentPeriodStart)}</div>
+          <div>{t('subscriptions.periodEnd')}: {formatDate(s.currentPeriodEnd)}</div>
         </div>
       ),
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('common.actions'),
       width: '260px',
       render: (s) => (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -379,9 +399,9 @@ export const SubscriptionsPage: React.FC = () => {
               setExtendDays(30);
               setExtendReason('');
             }}
-            title="Extend subscription validity"
+            title={t('subscriptions.extend')}
           >
-            Extend
+            {t('subscriptions.extend')}
           </button>
 
           <button
@@ -391,9 +411,9 @@ export const SubscriptionsPage: React.FC = () => {
               setChangePlanTarget(s);
               setChangePlanReason('');
             }}
-            title="Change plan tier"
+            title={t('subscriptions.changePlan')}
           >
-            Switch Plan
+            {t('subscriptions.changePlan')}
           </button>
 
           {s.status === 'ACTIVE' || s.status === 'TRIALING' ? (
@@ -405,7 +425,7 @@ export const SubscriptionsPage: React.FC = () => {
                 setStatusTarget({ sub: s, action: 'suspend' });
                 setActionReason('');
               }}
-              title="Suspend subscription"
+              title={t('subscriptions.suspend')}
             >
               <PauseCircle size={13} />
             </button>
@@ -418,7 +438,7 @@ export const SubscriptionsPage: React.FC = () => {
                 setStatusTarget({ sub: s, action: 'reactivate' });
                 setActionReason('');
               }}
-              title="Reactivate subscription"
+              title={t('subscriptions.reactivate')}
             >
               <PlayCircle size={13} />
             </button>
@@ -434,7 +454,7 @@ export const SubscriptionsPage: React.FC = () => {
                 setActionReason('');
                 setCancelAtPeriodEnd(true);
               }}
-              title="Cancel subscription"
+              title={t('subscriptions.cancel')}
             >
               <XCircle size={13} />
             </button>
@@ -444,7 +464,7 @@ export const SubscriptionsPage: React.FC = () => {
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => handleViewHistory(s)}
-            title="View lifecycle history log"
+            title={t('subscriptions.history')}
           >
             <History size={13} />
           </button>
@@ -456,16 +476,16 @@ export const SubscriptionsPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Commercial Oversight"
-        title="Tenant Subscriptions"
-        description="Monitor tenant plan assignments, lifecycle transitions, extensions, and quota entitlements in real time."
+        eyebrow={t('subscriptions.eyebrow')}
+        title={t('subscriptions.title')}
+        description={t('subscriptions.description')}
         actions={
           <button
             type="button"
             className="btn btn-primary btn-sm"
             onClick={() => setAssignModal(true)}
           >
-            <Plus size={15} /> Assign Plan to Shop
+            <Plus size={15} /> {t('subscriptions.assignPlan')}
           </button>
         }
       />
@@ -482,41 +502,43 @@ export const SubscriptionsPage: React.FC = () => {
       {summary && (
         <div className="metric-grid" style={{ marginBottom: '20px' }}>
           <div className="metric-card" onClick={() => setStatusFilter('ACTIVE')}>
-            <span className="metric-label">Active Subscriptions</span>
+            <span className="metric-label">{t('overview.activeSubscriptions')}</span>
             <div className="metric-value">{summary.activeSubscriptions}</div>
             <div className="metric-meta positive">
               <CheckCircle2 size={13} />
-              <span>{summary.totalSubscriptions} total assigned</span>
+              <span>
+                {language === 'am' ? `ጠቅላላ ${summary.totalSubscriptions} የተመደቡ` : `${summary.totalSubscriptions} total assigned`}
+              </span>
             </div>
           </div>
 
           <div className="metric-card" onClick={() => setStatusFilter('TRIALING')}>
-            <span className="metric-label">Free Trials</span>
+            <span className="metric-label">{language === 'am' ? 'ነጻ የሙከራ ጊዜያት' : 'Free Trials'}</span>
             <div className="metric-value" style={{ color: '#1e557b' }}>
               {summary.trialingSubscriptions}
             </div>
             <div className="metric-meta">
-              <span>Trialing accounts</span>
+              <span>{language === 'am' ? 'በሙከራ ላይ ያሉ መለያዎች' : 'Trialing accounts'}</span>
             </div>
           </div>
 
           <div className="metric-card" onClick={() => setStatusFilter('EXPIRED')}>
-            <span className="metric-label">Expired</span>
+            <span className="metric-label">{t('status.EXPIRED')}</span>
             <div className="metric-value" style={{ color: summary.expiredSubscriptions > 0 ? 'var(--warning)' : 'var(--ink)' }}>
               {summary.expiredSubscriptions}
             </div>
             <div className="metric-meta warning">
-              <span>Requires extension or renewal</span>
+              <span>{language === 'am' ? 'ማራዘሚያ ወይም እድሳት ያስፈልጋቸዋል' : 'Requires extension or renewal'}</span>
             </div>
           </div>
 
           <div className="metric-card" onClick={() => setStatusFilter('SUSPENDED')}>
-            <span className="metric-label">Suspended</span>
+            <span className="metric-label">{t('status.SUSPENDED')}</span>
             <div className="metric-value" style={{ color: summary.suspendedSubscriptions > 0 ? 'var(--danger)' : 'var(--ink)' }}>
               {summary.suspendedSubscriptions}
             </div>
             <div className="metric-meta">
-              <span>Admin frozen</span>
+              <span>{language === 'am' ? 'በአስተዳዳሪ የታገዱ' : 'Admin frozen'}</span>
             </div>
           </div>
         </div>
@@ -533,7 +555,7 @@ export const SubscriptionsPage: React.FC = () => {
         totalPages={totalPages}
         totalElements={totalElements}
         onPageChange={setPage}
-        searchPlaceholder="Search by tenant name, code, or plan..."
+        searchPlaceholder={t('subscriptions.searchPlaceholder')}
         searchValue={search}
         onSearchChange={(val) => {
           setSearch(val);
@@ -551,27 +573,29 @@ export const SubscriptionsPage: React.FC = () => {
                   setPage(0);
                 }}
               >
-                {st === 'ALL' ? 'All Subscriptions' : st.charAt(0) + st.slice(1).toLowerCase()}
+                {st === 'ALL'
+                  ? t('common.all')
+                  : t(`status.${st}`)}
               </button>
             ))}
           </div>
         }
-        emptyTitle="No tenant subscriptions found"
-        emptyMessage="There are currently no active or historical subscriptions matching your filter."
+        emptyTitle={language === 'am' ? 'ምንም የሱቅ ደንበኝነት አልተገኘም' : 'No tenant subscriptions found'}
+        emptyMessage={language === 'am' ? 'ከፍለጋ መስፈርትዎ ጋር የሚዛመድ ምንም ንቁ ወይም ታሪካዊ ደንበኝነት የለም።' : 'There are currently no active or historical subscriptions matching your filter.'}
         rowKey={(s) => s.id}
       />
 
       {/* Modal: Assign Plan */}
       {assignModal && (
         <Modal
-          title="Assign Subscription Plan"
-          subtitle="Assign or replace commercial plan for a tenant shop"
+          title={t('subscriptions.assignTitle')}
+          subtitle={t('subscriptions.assignSubtitle')}
           onClose={() => setAssignModal(false)}
         >
           <form onSubmit={handleAssign}>
             <div className="form-group">
               <label className="form-label" htmlFor="assign-tenant">
-                Select Tenant Shop <span className="required">*</span>
+                {t('subscriptions.selectShop')} <span className="required">*</span>
               </label>
               <select
                 id="assign-tenant"
@@ -580,9 +604,9 @@ export const SubscriptionsPage: React.FC = () => {
                 onChange={(e) => setAssignTenantId(e.target.value)}
                 required
               >
-                {availableTenants.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.code})
+                {availableTenants.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name} ({item.code})
                   </option>
                 ))}
               </select>
@@ -590,7 +614,7 @@ export const SubscriptionsPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="assign-plan">
-                Subscription Tier <span className="required">*</span>
+                {t('subscriptions.selectPlan')} <span className="required">*</span>
               </label>
               <select
                 id="assign-plan"
@@ -601,7 +625,7 @@ export const SubscriptionsPage: React.FC = () => {
               >
                 {availablePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} (Br {p.price}/{p.billingInterval.toLowerCase()})
+                    {p.name} ({p.price} {t('common.currencySymbol')}/{p.billingInterval.toLowerCase()})
                   </option>
                 ))}
               </select>
@@ -614,14 +638,14 @@ export const SubscriptionsPage: React.FC = () => {
                   checked={assignTrial}
                   onChange={(e) => setAssignTrial(e.target.checked)}
                 />
-                <span>Start as Commercial Free Trial</span>
+                <span>{t('subscriptions.startWithTrial')}</span>
               </label>
             </div>
 
             {assignTrial && (
               <div className="form-group">
                 <label className="form-label" htmlFor="assign-days">
-                  Trial Duration (Days)
+                  {t('subscriptions.trialDaysCount')}
                 </label>
                 <input
                   id="assign-days"
@@ -642,14 +666,14 @@ export const SubscriptionsPage: React.FC = () => {
                 onClick={() => setAssignModal(false)}
                 disabled={actionLoading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Assigning...' : 'Confirm Plan Assignment'}
+                {actionLoading ? t('subscriptions.assigning') : t('subscriptions.assignPlan')}
               </button>
             </div>
           </form>
@@ -659,14 +683,14 @@ export const SubscriptionsPage: React.FC = () => {
       {/* Modal: Extend Subscription */}
       {extendTarget && (
         <Modal
-          title={`Extend Subscription: ${extendTarget.tenantName}`}
-          subtitle={`Plan: ${extendTarget.planName} · Current Expiry: ${formatDate(extendTarget.currentPeriodEnd)}`}
+          title={`${t('subscriptions.extendTitle')}: ${extendTarget.tenantName}`}
+          subtitle={`${t('subscriptions.plan')}: ${extendTarget.planName} · ${t('subscriptions.periodEnd')}: ${formatDate(extendTarget.currentPeriodEnd)}`}
           onClose={() => setExtendTarget(null)}
         >
           <form onSubmit={handleExtend}>
             <div className="form-group">
               <label className="form-label" htmlFor="extend-days">
-                Additional Days <span className="required">*</span>
+                {t('subscriptions.extensionDays')} <span className="required">*</span>
               </label>
               <input
                 id="extend-days"
@@ -678,17 +702,21 @@ export const SubscriptionsPage: React.FC = () => {
                 onChange={(e) => setExtendDays(parseInt(e.target.value) || 30)}
                 required
               />
-              <p className="form-help">Advances the current period end date and restores expired subscriptions to ACTIVE.</p>
+              <p className="form-help">
+                {language === 'am'
+                  ? 'የአሁኑን የደንበኝነት ጊዜ ያራዝማል እንዲሁም ጊዜያቸው ያለፈባቸውን ወደ ንቁ ሁኔታ ይመልሳል።'
+                  : 'Advances the current period end date and restores expired subscriptions to ACTIVE.'}
+              </p>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="extend-reason">
-                Reason for Extension (Mandatory Record) <span className="required">*</span>
+                {t('subscriptions.reason')} <span className="required">*</span>
               </label>
               <textarea
                 id="extend-reason"
                 className="form-textarea"
-                placeholder="e.g. Promotional extension, offline payment receipt confirmed..."
+                placeholder={language === 'am' ? 'ለምሳሌ፡ የክፍያ ማረጋገጫ ደረሰኝ ስለቀረበ...' : 'e.g. Promotional extension, offline payment receipt confirmed...'}
                 value={extendReason}
                 onChange={(e) => setExtendReason(e.target.value)}
                 required
@@ -702,14 +730,14 @@ export const SubscriptionsPage: React.FC = () => {
                 onClick={() => setExtendTarget(null)}
                 disabled={actionLoading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={actionLoading || !extendReason.trim()}
               >
-                {actionLoading ? 'Extending...' : 'Confirm Extension'}
+                {actionLoading ? t('common.loading') : t('subscriptions.extend')}
               </button>
             </div>
           </form>
@@ -719,14 +747,14 @@ export const SubscriptionsPage: React.FC = () => {
       {/* Modal: Switch Plan */}
       {changePlanTarget && (
         <Modal
-          title={`Switch Subscription Plan: ${changePlanTarget.tenantName}`}
-          subtitle={`Current Plan: ${changePlanTarget.planName}`}
+          title={`${t('subscriptions.changeTitle')}: ${changePlanTarget.tenantName}`}
+          subtitle={`${t('subscriptions.plan')}: ${changePlanTarget.planName}`}
           onClose={() => setChangePlanTarget(null)}
         >
           <form onSubmit={handleChangePlan}>
             <div className="form-group">
               <label className="form-label" htmlFor="switch-plan">
-                New Plan Tier <span className="required">*</span>
+                {t('subscriptions.targetPlan')} <span className="required">*</span>
               </label>
               <select
                 id="switch-plan"
@@ -737,7 +765,7 @@ export const SubscriptionsPage: React.FC = () => {
               >
                 {availablePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} (Br {p.price}/{p.billingInterval.toLowerCase()})
+                    {p.name} ({p.price} {t('common.currencySymbol')}/{p.billingInterval.toLowerCase()})
                   </option>
                 ))}
               </select>
@@ -745,12 +773,12 @@ export const SubscriptionsPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="switch-reason">
-                Reason for Plan Change
+                {t('subscriptions.reason')}
               </label>
               <textarea
                 id="switch-reason"
                 className="form-textarea"
-                placeholder="e.g. Upgraded to Enterprise tier per shop owner request..."
+                placeholder={language === 'am' ? 'ለምሳሌ፡ በባለቤቱ ጥያቄ መሰረት ወደ ከፍተኛ ደረጃ የተቀየረ...' : 'e.g. Upgraded to Enterprise tier per shop owner request...'}
                 value={changePlanReason}
                 onChange={(e) => setChangePlanReason(e.target.value)}
               />
@@ -763,14 +791,14 @@ export const SubscriptionsPage: React.FC = () => {
                 onClick={() => setChangePlanTarget(null)}
                 disabled={actionLoading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={actionLoading}
               >
-                {actionLoading ? 'Updating Plan...' : 'Confirm Plan Switch'}
+                {actionLoading ? t('common.loading') : t('subscriptions.changePlan')}
               </button>
             </div>
           </form>
@@ -780,8 +808,14 @@ export const SubscriptionsPage: React.FC = () => {
       {/* Modal: Lifecycle Actions (Suspend, Reactivate, Cancel) */}
       {statusTarget && (
         <Modal
-          title={`${statusTarget.action.charAt(0).toUpperCase() + statusTarget.action.slice(1)} Subscription`}
-          subtitle={`Tenant Shop: ${statusTarget.sub.tenantName}`}
+          title={
+            statusTarget.action === 'suspend'
+              ? `${statusTarget.sub.tenantName} ${t('subscriptions.suspend')}?`
+              : statusTarget.action === 'reactivate'
+              ? `${statusTarget.sub.tenantName} ${t('subscriptions.reactivate')}?`
+              : `${statusTarget.sub.tenantName} ${t('subscriptions.cancel')}?`
+          }
+          subtitle={`${t('subscriptions.shop')}: ${statusTarget.sub.tenantName}`}
           onClose={() => setStatusTarget(null)}
         >
           <div
@@ -800,13 +834,13 @@ export const SubscriptionsPage: React.FC = () => {
             <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
               {statusTarget.action === 'suspend' && (
-                <>Suspending access disables product mutations and sales processing for this tenant until reactivated.</>
+                <>{language === 'am' ? 'ይህን ደንበኝነት ማገድ ተከራዩ እንደገና እስኪነቃ ድረስ አዳዲስ ምርቶችን እና ሽያጮችን እንዳያከናውን ያግደዋል።' : 'Suspending access disables product mutations and sales processing for this tenant until reactivated.'}</>
               )}
               {statusTarget.action === 'reactivate' && (
-                <>Reactivating restores the subscription to active status and enables tenant workspace operations.</>
+                <>{language === 'am' ? 'እንደገና ማግበር የደንበኝነት እቅዱን ወደ ንቁ ሁኔታ ይመልሳል እንዲሁም የሱቅ ስራዎችን ያስጀምራል።' : 'Reactivating restores the subscription to active status and enables tenant workspace operations.'}</>
               )}
               {statusTarget.action === 'cancel' && (
-                <>Cancelling will transition the subscription to CANCELLED. Data is preserved but further operations will be gated.</>
+                <>{language === 'am' ? 'መሰረዝ የደንበኝነት ሁኔታውን ወደ "የተሰረዘ" ይቀይረዋል። መረጃዎች ይጠበቃሉ ነገር ግን ተጨማሪ ስራዎች ይታገዳሉ።' : 'Cancelling will transition the subscription to CANCELLED. Data is preserved but further operations will be gated.'}</>
               )}
             </div>
           </div>
@@ -819,19 +853,19 @@ export const SubscriptionsPage: React.FC = () => {
                   checked={cancelAtPeriodEnd}
                   onChange={(e) => setCancelAtPeriodEnd(e.target.checked)}
                 />
-                <span>Cancel at Current Period End (Preserve access until period expiry)</span>
+                <span>{language === 'am' ? 'በአሁኑ የክፍያ ጊዜ ማብቂያ ላይ ይሰረዝ (እስከ ማብቂያው ድረስ አገልግሎቱ ይቀጥላል)' : 'Cancel at Current Period End (Preserve access until period expiry)'}</span>
               </label>
             </div>
           )}
 
           <div className="form-group">
             <label className="form-label" htmlFor="lifecycle-reason">
-              Reason / Reviewer Notes <span className="required">*</span>
+              {t('subscriptions.reason')} <span className="required">*</span>
             </label>
             <textarea
               id="lifecycle-reason"
               className="form-textarea"
-              placeholder="State the justification for this subscription status change..."
+              placeholder={language === 'am' ? 'የዚህን ሁኔታ ለውጥ ምክንያት ያስገቡ...' : 'State the justification for this subscription status change...'}
               value={actionReason}
               onChange={(e) => setActionReason(e.target.value)}
               required
@@ -845,7 +879,7 @@ export const SubscriptionsPage: React.FC = () => {
               onClick={() => setStatusTarget(null)}
               disabled={actionLoading}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -853,7 +887,13 @@ export const SubscriptionsPage: React.FC = () => {
               onClick={handleConfirmLifecycleAction}
               disabled={actionLoading || !actionReason.trim()}
             >
-              {actionLoading ? 'Processing...' : `Confirm ${statusTarget.action}`}
+              {actionLoading
+                ? t('common.loading')
+                : statusTarget.action === 'reactivate'
+                ? t('subscriptions.reactivate')
+                : statusTarget.action === 'suspend'
+                ? t('subscriptions.suspend')
+                : t('subscriptions.cancel')}
             </button>
           </div>
         </Modal>
@@ -862,18 +902,18 @@ export const SubscriptionsPage: React.FC = () => {
       {/* Modal: View Subscription History Log */}
       {historyTarget && (
         <Modal
-          title={`Subscription History: ${historyTarget.tenantName}`}
-          subtitle={`Plan: ${historyTarget.planName} · ID: ${historyTarget.id}`}
+          title={`${t('subscriptions.historyTitle')}: ${historyTarget.tenantName}`}
+          subtitle={`${t('subscriptions.plan')}: ${historyTarget.planName}`}
           onClose={() => setHistoryTarget(null)}
           maxWidth="640px"
         >
           {loadingHistory ? (
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)' }}>
-              Loading lifecycle history records...
+              {t('common.loading')}
             </div>
           ) : historyList.length === 0 ? (
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)' }}>
-              No previous history transitions recorded.
+              {t('subscriptions.noHistory')}
             </div>
           ) : (
             <div className="action-feed-list">
@@ -885,13 +925,14 @@ export const SubscriptionsPage: React.FC = () => {
                   <div className="feed-content">
                     <div className="feed-title">{h.action}</div>
                     <div className="feed-meta">
-                      Transition: {h.fromStatus ? `${h.fromStatus} → ` : ''}
+                      {language === 'am' ? 'የሁኔታ ለውጥ: ' : 'Transition: '}
+                      {h.fromStatus ? `${h.fromStatus} → ` : ''}
                       <strong>{h.toStatus}</strong>
-                      {h.reason && ` · Reason: "${h.reason}"`}
+                      {h.reason && ` · ${t('subscriptions.reason')}: "${h.reason}"`}
                     </div>
                     {h.actorEmail && (
                       <div style={{ fontSize: '11px', color: 'var(--faint)', marginTop: '2px' }}>
-                        By: {h.actorEmail}
+                        {language === 'am' ? 'የፈጸመው: ' : 'By: '}{h.actorEmail}
                       </div>
                     )}
                   </div>
@@ -907,7 +948,7 @@ export const SubscriptionsPage: React.FC = () => {
               className="btn btn-secondary"
               onClick={() => setHistoryTarget(null)}
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
         </Modal>

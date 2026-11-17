@@ -19,8 +19,10 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Alert } from '../components/Alert';
 import { DataTable, Column } from '../components/DataTable';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const TenantsPage: React.FC = () => {
+  const { t, formatDate, language } = useLanguage();
   const [tenants, setTenants] = useState<TenantSummaryResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,11 +77,11 @@ export const TenantsPage: React.FC = () => {
       setTotalPages(res.totalPages || 1);
       setTotalElements(res.totalElements || 0);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to retrieve tenants.');
+      setError(err instanceof Error ? err.message : (language === 'am' ? 'የሱቆችን መረጃ ማምጣት አልተቻለም።' : 'Failed to retrieve tenants.'));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page]);
+  }, [statusFilter, search, page, language]);
 
   useEffect(() => {
     fetchTenants();
@@ -100,7 +102,12 @@ export const TenantsPage: React.FC = () => {
   const handleCreateTenant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.name.trim() || !createForm.code.trim() || !createForm.initialOwnerEmail.trim()) {
-      setBanner({ type: 'danger', message: 'Shop name, code slug, and owner email are required.' });
+      setBanner({
+        type: 'danger',
+        message: language === 'am'
+          ? 'የሱቅ ስም፣ የኮድ መለያ እና የባለቤት ኢሜይል ማስገባት ግዴታ ነው።'
+          : 'Shop name, code slug, and owner email are required.',
+      });
       return;
     }
 
@@ -114,7 +121,9 @@ export const TenantsPage: React.FC = () => {
       });
       setBanner({
         type: 'success',
-        message: `Tenant "${createForm.name}" created successfully.`,
+        message: language === 'am'
+          ? `"${createForm.name}" የተባለው ሱቅ በተሳካ ሁኔታ ተፈጥሯል።`
+          : `Tenant "${createForm.name}" created successfully.`,
       });
       setShowCreateModal(false);
       setCreateForm({
@@ -132,7 +141,7 @@ export const TenantsPage: React.FC = () => {
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to create tenant shop.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'ሱቁን መፍጠር አልተቻለም።' : 'Failed to create tenant shop.'),
       });
     } finally {
       setCreating(false);
@@ -147,7 +156,7 @@ export const TenantsPage: React.FC = () => {
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to inspect tenant status.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የተከራዩን ሁኔታ መመርመር አልተቻለም።' : 'Failed to inspect tenant status.'),
       });
     } finally {
       setInspecting(false);
@@ -170,79 +179,67 @@ export const TenantsPage: React.FC = () => {
       });
       setBanner({
         type: 'success',
-        message: `Tenant "${statusTarget.name}" operational status updated to ${newStatus}.`,
+        message: language === 'am'
+          ? `የ"${statusTarget.name}" የስራ ሁኔታ ወደ ${t(`status.${newStatus}`)} ተቀይሯል።`
+          : `Tenant "${statusTarget.name}" operational status updated to ${newStatus}.`,
       });
       setStatusTarget(null);
       await fetchTenants();
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to update tenant status.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የተከራዩን ሁኔታ መቀየር አልተቻለም።' : 'Failed to update tenant status.'),
       });
     } finally {
       setUpdatingStatus(false);
     }
   };
 
-  const formatDate = (isoStr?: string) => {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return isoStr;
-    }
-  };
-
   const columns: Column<TenantSummaryResponse>[] = [
     {
       key: 'code',
-      header: 'Tenant Slug',
+      header: t('tenants.code'),
       width: '130px',
-      render: (t) => <span className="mono-text">{t.code}</span>,
+      render: (item) => <span className="mono-text">{item.code}</span>,
     },
     {
       key: 'name',
-      header: 'Shop Name',
-      render: (t) => (
+      header: t('tenants.shopName'),
+      render: (item) => (
         <div>
-          <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{t.name}</div>
+          <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{item.name}</div>
           <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-            Code: {t.code}
+            {t('tenants.code')}: {item.code}
           </div>
         </div>
       ),
     },
     {
       key: 'owner',
-      header: 'Primary Owner',
-      render: (t) => (
+      header: t('tenants.owner'),
+      render: (item) => (
         <div style={{ fontSize: '12.5px' }}>
-          <div style={{ fontWeight: 600 }}>{t.ownerFullName || 'Owner'}</div>
-          <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{t.ownerEmail || '—'}</div>
+          <div style={{ fontWeight: 600 }}>{item.ownerFullName || (language === 'am' ? 'ባለቤት' : 'Owner')}</div>
+          <div style={{ fontSize: '11.5px', color: 'var(--muted)' }}>{item.ownerEmail || '—'}</div>
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'Operational Status',
-      render: (t) => <StatusBadge status={t.status} />,
+      header: t('common.status'),
+      render: (item) => <StatusBadge status={item.status} />,
     },
     {
       key: 'subscription',
-      header: 'Subscription',
-      render: (t) => (
+      header: t('tenants.activeSubscription'),
+      render: (item) => (
         <div style={{ fontSize: '12px' }}>
           <span style={{ fontWeight: 700, color: 'var(--teal)' }}>
-            {t.activePlanCode || 'STARTER'}
+            {item.activePlanCode || 'STARTER'}
           </span>
-          {t.subscriptionStatus && (
+          {item.subscriptionStatus && (
             <div style={{ marginTop: '2px' }}>
-              <StatusBadge status={t.subscriptionStatus} size="sm" />
+              <StatusBadge status={item.subscriptionStatus} size="sm" />
             </div>
           )}
         </div>
@@ -250,44 +247,44 @@ export const TenantsPage: React.FC = () => {
     },
     {
       key: 'createdAt',
-      header: 'Created',
-      render: (t) => <span style={{ fontSize: '12.5px' }}>{formatDate(t.createdAt)}</span>,
+      header: t('tenants.createdDate'),
+      render: (item) => <span style={{ fontSize: '12.5px' }}>{formatDate(item.createdAt)}</span>,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('common.actions'),
       width: '180px',
-      render: (t) => (
+      render: (item) => (
         <div style={{ display: 'flex', gap: '6px' }}>
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            onClick={() => handleInspect(t.id)}
+            onClick={() => handleInspect(item.id)}
             disabled={inspecting}
-            title="Inspect operational status and subscription breakdown"
+            title={t('tenants.inspect')}
           >
-            Inspect
+            {t('tenants.inspect')}
           </button>
 
-          {t.status === 'ACTIVE' ? (
+          {item.status === 'ACTIVE' ? (
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               style={{ color: 'var(--danger)' }}
-              onClick={() => handleOpenStatusModal(t, 'SUSPENDED')}
-              title="Suspend shop tenant"
+              onClick={() => handleOpenStatusModal(item, 'SUSPENDED')}
+              title={t('tenants.suspend')}
             >
-              <PauseCircle size={14} /> Suspend
+              <PauseCircle size={14} /> {t('tenants.suspend')}
             </button>
           ) : (
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               style={{ color: 'var(--success)' }}
-              onClick={() => handleOpenStatusModal(t, 'ACTIVE')}
-              title="Reactivate shop tenant"
+              onClick={() => handleOpenStatusModal(item, 'ACTIVE')}
+              title={t('tenants.activate')}
             >
-              <PlayCircle size={14} /> Activate
+              <PlayCircle size={14} /> {t('tenants.activate')}
             </button>
           )}
         </div>
@@ -298,16 +295,16 @@ export const TenantsPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Merchant Directory"
-        title="Shops &amp; Tenants Directory"
-        description="Direct provisioning, operational status administration, and decoupled subscription lifecycle monitoring."
+        eyebrow={t('tenants.eyebrow')}
+        title={t('tenants.title')}
+        description={t('tenants.description')}
         actions={
           <button
             type="button"
             className="btn btn-primary btn-sm"
             onClick={() => setShowCreateModal(true)}
           >
-            <Plus size={15} /> Provision New Shop
+            <Plus size={15} /> {t('tenants.createShop')}
           </button>
         }
       />
@@ -331,7 +328,7 @@ export const TenantsPage: React.FC = () => {
         totalPages={totalPages}
         totalElements={totalElements}
         onPageChange={setPage}
-        searchPlaceholder="Search shop name, code, or owner..."
+        searchPlaceholder={t('tenants.searchPlaceholder')}
         searchValue={search}
         onSearchChange={(val) => {
           setSearch(val);
@@ -349,21 +346,21 @@ export const TenantsPage: React.FC = () => {
                   setPage(0);
                 }}
               >
-                {st === 'ALL' ? 'All Shops' : st.charAt(0) + st.slice(1).toLowerCase()}
+                {st === 'ALL' ? t('tenants.allStatuses') : t(`status.${st}`)}
               </button>
             ))}
           </div>
         }
-        emptyTitle="No tenant shops found"
-        emptyMessage="There are no shops matching your search or operational filter."
-        rowKey={(t) => t.id}
+        emptyTitle={language === 'am' ? 'ምንም ሱቅ አልተገኘም' : 'No tenant shops found'}
+        emptyMessage={language === 'am' ? 'ከፍለጋዎ ወይም ከተመረጠው ሁኔታ ጋር የሚዛመድ ሱቅ የለም።' : 'There are no shops matching your search or operational filter.'}
+        rowKey={(item) => item.id}
       />
 
       {/* Modal: Create Tenant Directly */}
       {showCreateModal && (
         <Modal
-          title="Direct Provision Tenant Shop"
-          subtitle="Provision a merchant yard and primary owner without public onboarding review"
+          title={t('tenants.createTitle')}
+          subtitle={t('tenants.createSubtitle')}
           onClose={() => setShowCreateModal(false)}
           maxWidth="620px"
         >
@@ -371,13 +368,13 @@ export const TenantsPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="tenant-name">
-                  Shop Name <span className="required">*</span>
+                  {t('tenants.shopName')} <span className="required">*</span>
                 </label>
                 <input
                   id="tenant-name"
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Al-Madina Building Materials"
+                  placeholder={language === 'am' ? 'ለምሳሌ፡ አል-መዲና የህንጻ መሳሪያዎች' : 'e.g. Al-Madina Building Materials'}
                   value={createForm.name}
                   onChange={(e) => {
                     const name = e.target.value;
@@ -394,7 +391,7 @@ export const TenantsPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="tenant-code">
-                  Unique Slug Code <span className="required">*</span>
+                  {t('tenants.code')} <span className="required">*</span>
                 </label>
                 <input
                   id="tenant-code"
@@ -411,7 +408,7 @@ export const TenantsPage: React.FC = () => {
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="owner-email">
-                  Owner Email Address <span className="required">*</span>
+                  {t('requests.email')} <span className="required">*</span>
                 </label>
                 <input
                   id="owner-email"
@@ -426,13 +423,13 @@ export const TenantsPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="owner-name">
-                  Owner Full Name <span className="required">*</span>
+                  {t('requests.ownerName')} <span className="required">*</span>
                 </label>
                 <input
                   id="owner-name"
                   type="text"
                   className="form-input"
-                  placeholder="Rashid Al-Khatib"
+                  placeholder={language === 'am' ? 'አበበ ተስፋዬ' : 'Abebe Tesfaye'}
                   value={createForm.initialOwnerFullName}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, initialOwnerFullName: e.target.value }))}
                   required
@@ -442,25 +439,25 @@ export const TenantsPage: React.FC = () => {
 
             <div className="form-group">
               <label className="form-label" htmlFor="owner-password">
-                Initial Owner Password
+                {t('requests.temporaryPassword')}
               </label>
               <input
                 id="owner-password"
                 type="password"
                 className="form-input"
-                placeholder="Defaults to Admin@123456 if left blank"
+                placeholder={language === 'am' ? 'ካልተሞላ በራሱ Admin@123456 ይሆናል' : 'Defaults to Admin@123456 if left blank'}
                 value={createForm.initialOwnerPassword}
                 onChange={(e) => setCreateForm((prev) => ({ ...prev, initialOwnerPassword: e.target.value }))}
               />
               <span style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px', display: 'block' }}>
-                Password the shop owner will use to log into the Shop Portal (min 6 characters).
+                {language === 'am' ? 'የሱቁ ባለቤት ወደ ሱቅ ፖርታል ለመግባት የሚጠቀምበት የይለፍ ቃል (ቢያንስ 6 ፊደላት)።' : 'Password the shop owner will use to log into the Shop Portal (min 6 characters).'}
               </span>
             </div>
 
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="tenant-plan">
-                  Commercial Plan Tier
+                  {t('requests.plan')}
                 </label>
                 <select
                   id="tenant-plan"
@@ -470,7 +467,7 @@ export const TenantsPage: React.FC = () => {
                 >
                   {availablePlans.map((p) => (
                     <option key={p.id} value={p.code}>
-                      {p.name} (Br {p.price}/{p.billingInterval.toLowerCase()})
+                      {p.name} ({p.price} {t('common.currencySymbol')}/{p.billingInterval.toLowerCase()})
                     </option>
                   ))}
                 </select>
@@ -478,13 +475,13 @@ export const TenantsPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label" htmlFor="tenant-currency">
-                  Operating Currency
+                  {t('tenants.currency')}
                 </label>
                 <input
                   id="tenant-currency"
                   type="text"
                   className="form-input"
-                  value="ETB (Ethiopian Birr)"
+                  value="ETB (የኢትዮጵያ ብር)"
                   disabled
                   readOnly
                 />
@@ -498,14 +495,14 @@ export const TenantsPage: React.FC = () => {
                 onClick={() => setShowCreateModal(false)}
                 disabled={creating}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={creating}
               >
-                {creating ? 'Creating Shop...' : 'Create Tenant Shop'}
+                {creating ? t('tenants.creating') : t('tenants.createShop')}
               </button>
             </div>
           </form>
@@ -515,8 +512,8 @@ export const TenantsPage: React.FC = () => {
       {/* Modal: Inspect Decoupled Operational Status & Subscription Lifecycle */}
       {inspectStatus && (
         <Modal
-          title={`Status Breakdown: ${inspectStatus.name}`}
-          subtitle={`Identifier: ${inspectStatus.code}`}
+          title={`${t('tenants.inspectTitle')}: ${inspectStatus.name}`}
+          subtitle={`${t('tenants.code')}: ${inspectStatus.code}`}
           onClose={() => setInspectStatus(null)}
           maxWidth="640px"
         >
@@ -534,7 +531,7 @@ export const TenantsPage: React.FC = () => {
           >
             <div>
               <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Operational Status
+                {t('tenants.operationalStatus')}
               </span>
               <div style={{ marginTop: '4px' }}>
                 <StatusBadge status={inspectStatus.operationalStatus} />
@@ -543,7 +540,7 @@ export const TenantsPage: React.FC = () => {
 
             <div>
               <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Subscription Lifecycle
+                {t('tenants.activeSubscription')}
               </span>
               <div style={{ marginTop: '4px' }}>
                 <StatusBadge status={inspectStatus.effectiveStatus || inspectStatus.lifecycleStatus || 'ACTIVE'} />
@@ -552,7 +549,7 @@ export const TenantsPage: React.FC = () => {
 
             <div>
               <span style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                Days Remaining
+                {language === 'am' ? 'የቀሩ ቀናት' : 'Days Remaining'}
               </span>
               <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)', marginTop: '2px' }}>
                 {inspectStatus.daysRemaining ?? '—'}
@@ -563,38 +560,40 @@ export const TenantsPage: React.FC = () => {
           <div className="card detail-card" style={{ padding: '16px' }}>
             <div className="detail-card-head" style={{ marginBottom: '12px' }}>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Layers size={16} style={{ color: 'var(--teal)' }} /> Subscription Lifecycle Details
+                <Layers size={16} style={{ color: 'var(--teal)' }} /> {language === 'am' ? 'የደንበኝነት ዝርዝር መረጃ' : 'Subscription Lifecycle Details'}
               </h3>
             </div>
 
             <div className="data-kv-grid">
-              <div className="data-kv-label">Plan Tier</div>
+              <div className="data-kv-label">{t('subscriptions.plan')}</div>
               <div className="data-kv-value">
                 {inspectStatus.planName || inspectStatus.planCode || 'Standard Tier'}
               </div>
 
-              <div className="data-kv-label">Current Period</div>
+              <div className="data-kv-label">{language === 'am' ? 'የአሁኑ ዑደት' : 'Current Period'}</div>
               <div className="data-kv-value">
                 {formatDate(inspectStatus.currentPeriodStart)} — {formatDate(inspectStatus.currentPeriodEnd)}
               </div>
 
               {inspectStatus.trialStart && (
                 <>
-                  <div className="data-kv-label">Trial Period</div>
+                  <div className="data-kv-label">{language === 'am' ? 'የሙከራ ጊዜ' : 'Trial Period'}</div>
                   <div className="data-kv-value">
                     {formatDate(inspectStatus.trialStart)} — {formatDate(inspectStatus.trialEnd)}
                   </div>
                 </>
               )}
 
-              <div className="data-kv-label">Cancel at End</div>
+              <div className="data-kv-label">{language === 'am' ? 'በጊዜ ማብቂያ ላይ ይሰረዝ?' : 'Cancel at End'}</div>
               <div className="data-kv-value">
-                {inspectStatus.cancelAtPeriodEnd ? 'Yes (Scheduled for cancellation)' : 'No (Continuous)'}
+                {inspectStatus.cancelAtPeriodEnd
+                  ? (language === 'am' ? 'አዎ (እንዲሰረዝ ተይዟል)' : 'Yes (Scheduled for cancellation)')
+                  : (language === 'am' ? 'አይ (ቀጣይነት ያለው)' : 'No (Continuous)')}
               </div>
 
               {inspectStatus.onboardingReference && (
                 <>
-                  <div className="data-kv-label">Onboarding Ref</div>
+                  <div className="data-kv-label">{t('requests.referenceCode')}</div>
                   <div className="data-kv-value mono-text">{inspectStatus.onboardingReference}</div>
                 </>
               )}
@@ -607,7 +606,7 @@ export const TenantsPage: React.FC = () => {
               className="btn btn-secondary"
               onClick={() => setInspectStatus(null)}
             >
-              Close
+              {t('common.close')}
             </button>
           </div>
         </Modal>
@@ -616,7 +615,11 @@ export const TenantsPage: React.FC = () => {
       {/* Modal: Change Operational Status (Suspend / Reactivate) */}
       {statusTarget && (
         <Modal
-          title={newStatus === 'SUSPENDED' ? `Suspend ${statusTarget.name}?` : `Reactivate ${statusTarget.name}?`}
+          title={
+            newStatus === 'SUSPENDED'
+              ? `${statusTarget.name} ${t('tenants.suspend')}?`
+              : `${statusTarget.name} ${t('tenants.activate')}?`
+          }
           onClose={() => setStatusTarget(null)}
           maxWidth="500px"
         >
@@ -636,19 +639,27 @@ export const TenantsPage: React.FC = () => {
             <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
             <div>
               {newStatus === 'SUSPENDED'
-                ? 'Suspending this tenant will immediately block all staff users from creating products, recording stock movements, or processing sales. Existing data will be preserved.'
-                : 'Reactivating this tenant restores operational access to products, receiving, and counter sales for authorized shop staff.'}
+                ? (language === 'am'
+                    ? 'ይህን ተከራይ ማገድ ሰራተኞች ምርት እንዳይፈጥሩ፣ የእቃ እንቅስቃሴ እንዳይመዘግቡ ወይም ሽያጭ እንዳያከናውኑ ወዲያውኑ ያግዳቸዋል። ነባር መረጃዎች ይጠበቃሉ።'
+                    : 'Suspending this tenant will immediately block all staff users from creating products, recording stock movements, or processing sales. Existing data will be preserved.')
+                : (language === 'am'
+                    ? 'ይህን ተከራይ እንደገና ማግበር ለተፈቀደላቸው የሱቅ ሰራተኞች የስራ መዳረሻን ሙሉ በሙሉ ይመልሳል።'
+                    : 'Reactivating this tenant restores operational access to products, receiving, and counter sales for authorized shop staff.')}
             </div>
           </div>
 
           <div className="form-group">
             <label className="form-label" htmlFor="status-reason">
-              Reason for Status Change
+              {t('tenants.statusReason')}
             </label>
             <textarea
               id="status-reason"
               className="form-textarea"
-              placeholder={newStatus === 'SUSPENDED' ? 'e.g. Terms violation, requested seasonal suspension...' : 'e.g. Account reinstated after review...'}
+              placeholder={
+                newStatus === 'SUSPENDED'
+                  ? (language === 'am' ? 'ለምሳሌ፡ የደንብ ጥሰት ወይም የተጠየቀ ጊዜያዊ እገዳ...' : 'e.g. Terms violation, requested seasonal suspension...')
+                  : (language === 'am' ? 'ለምሳሌ፡ ከግምገማ በኋላ የተፈቀደ...' : 'e.g. Account reinstated after review...')
+              }
               value={statusReason}
               onChange={(e) => setStatusReason(e.target.value)}
               disabled={updatingStatus}
@@ -662,7 +673,7 @@ export const TenantsPage: React.FC = () => {
               onClick={() => setStatusTarget(null)}
               disabled={updatingStatus}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="button"
@@ -670,7 +681,11 @@ export const TenantsPage: React.FC = () => {
               onClick={handleConfirmStatusChange}
               disabled={updatingStatus}
             >
-              {updatingStatus ? 'Updating Status...' : newStatus === 'SUSPENDED' ? 'Confirm Suspension' : 'Confirm Reactivation'}
+              {updatingStatus
+                ? t('tenants.updating')
+                : newStatus === 'SUSPENDED'
+                ? t('tenants.suspend')
+                : t('tenants.activate')}
             </button>
           </div>
         </Modal>

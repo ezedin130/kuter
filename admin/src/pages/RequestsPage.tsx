@@ -22,12 +22,14 @@ import { StatusBadge } from '../components/StatusBadge';
 import { Modal } from '../components/Modal';
 import { Alert } from '../components/Alert';
 import { DataTable, Column } from '../components/DataTable';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface RequestsPageProps {
   onRequestsUpdated?: () => void;
 }
 
 export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated }) => {
+  const { t, formatDate, language } = useLanguage();
   const [requests, setRequests] = useState<OnboardingDetailResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,11 +74,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
         onRequestsUpdated();
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch onboarding requests.');
+      setError(err instanceof Error ? err.message : (language === 'am' ? 'የምዝገባ ጥያቄዎችን ማምጣት አልተቻለም።' : 'Failed to fetch onboarding requests.'));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page, onRequestsUpdated]);
+  }, [statusFilter, search, page, onRequestsUpdated, t]);
 
   useEffect(() => {
     fetchRequests();
@@ -99,7 +101,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to approve onboarding request.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'የምዝገባ ጥያቄውን ማጽደቅ አልተቻለም።' : 'Failed to approve onboarding request.'),
       });
       setShowApproveModal(false);
     } finally {
@@ -110,7 +112,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
   const handleReject = async () => {
     if (!selectedRequest) return;
     if (!rejectReason.trim()) {
-      setBanner({ type: 'danger', message: 'A rejection reason is required before confirming.' });
+      setBanner({ type: 'danger', message: t('requests.rejectReasonRequired') });
       return;
     }
     setRejecting(true);
@@ -120,7 +122,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
       });
       setBanner({
         type: 'success',
-        message: `Registration request ${selectedRequest.referenceCode} has been rejected.`,
+        message: language === 'am'
+          ? `የምዝገባ ጥያቄ ቁጥር ${selectedRequest.referenceCode} ውድቅ ተደርጓል።`
+          : `Registration request ${selectedRequest.referenceCode} has been rejected.`,
       });
       setShowRejectModal(false);
       setRejectReason('');
@@ -129,24 +133,10 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
     } catch (err: unknown) {
       setBanner({
         type: 'danger',
-        message: err instanceof Error ? err.message : 'Failed to reject onboarding request.',
+        message: err instanceof Error ? err.message : (language === 'am' ? 'ጥያቄውን ውድቅ ማድረግ አልተቻለም።' : 'Failed to reject onboarding request.'),
       });
     } finally {
       setRejecting(false);
-    }
-  };
-
-  const formatDate = (isoStr?: string) => {
-    if (!isoStr) return '—';
-    try {
-      const d = new Date(isoStr);
-      return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    } catch {
-      return isoStr;
     }
   };
 
@@ -179,14 +169,14 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             <Check size={28} />
           </div>
 
-          <StatusBadge status="APPROVED" label="Provisioned Successfully" />
+          <StatusBadge status="APPROVED" label={t('status.APPROVED')} />
 
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--ink)', margin: '14px 0 8px 0' }}>
-            {selectedRequest?.shopName || 'Shop Tenant'} is Ready for Operations
+            {selectedRequest?.shopName || 'Shop Tenant'} {language === 'am' ? 'ለስራ ዝግጁ ነው' : 'is Ready for Operations'}
           </h2>
 
           <p style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.5, marginBottom: '24px' }}>
-            The tenant shop, primary owner user account, and commercial trial subscription were provisioned in a single atomic transaction.
+            {t('requests.successDesc')}
           </p>
 
           <div
@@ -204,7 +194,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
           >
             <div>
               <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                Tenant Identifier
+                {t('requests.shopCode')}
               </span>
               <div className="mono-text" style={{ fontSize: '14px', marginTop: '4px' }}>
                 {approvalResult.tenantCode}
@@ -213,7 +203,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
 
             <div>
               <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                Primary Owner Email
+                {t('requests.adminAccount')}
               </span>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--ink)', marginTop: '4px' }}>
                 {approvalResult.ownerEmail}
@@ -222,7 +212,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
 
             <div>
               <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                Assigned Subscription
+                {t('requests.plan')}
               </span>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--teal)', marginTop: '4px' }}>
                 {approvalResult.planCode || 'Standard Plan'}
@@ -238,7 +228,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
               setSelectedRequest(null);
             }}
           >
-            Return to Requests List
+            {t('requests.doneBtn')}
           </button>
         </div>
       </div>
@@ -250,9 +240,13 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
     return (
       <div>
         <PageHead
-          eyebrow={`Applications / Reference ${selectedRequest.referenceCode}`}
+          eyebrow={`${t('requests.eyebrow')} / ${t('requests.referenceCode')} ${selectedRequest.referenceCode}`}
           title={selectedRequest.shopName}
-          description={`Submitted ${formatDate(selectedRequest.createdAt)} by ${selectedRequest.ownerFullName}.`}
+          description={
+            language === 'am'
+              ? `በ ${selectedRequest.ownerFullName} በ ${formatDate(selectedRequest.createdAt)} የቀረበ።`
+              : `Submitted ${formatDate(selectedRequest.createdAt)} by ${selectedRequest.ownerFullName}.`
+          }
           actions={
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
@@ -260,7 +254,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 className="btn btn-secondary btn-sm"
                 onClick={() => setSelectedRequest(null)}
               >
-                <ArrowLeft size={14} /> Back to List
+                <ArrowLeft size={14} /> {t('common.back')}
               </button>
 
               {selectedRequest.status === 'PENDING' && (
@@ -270,14 +264,14 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                     className="btn btn-danger btn-sm"
                     onClick={() => setShowRejectModal(true)}
                   >
-                    <X size={14} /> Reject Request
+                    <X size={14} /> {t('requests.reject')}
                   </button>
                   <button
                     type="button"
                     className="btn btn-primary btn-sm"
                     onClick={() => setShowApproveModal(true)}
                   >
-                    <Check size={14} /> Approve Request
+                    <Check size={14} /> {t('requests.approve')}
                   </button>
                 </>
               )}
@@ -300,29 +294,29 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             <div className="card detail-card">
               <div className="detail-card-head">
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Building2 size={16} style={{ color: 'var(--teal)' }} /> Shop Details
+                  <Building2 size={16} style={{ color: 'var(--teal)' }} /> {t('requests.requestDetailsTitle')}
                 </h3>
                 <StatusBadge status={selectedRequest.status} />
               </div>
 
               <div className="data-kv-grid">
-                <div className="data-kv-label">Shop Name</div>
+                <div className="data-kv-label">{t('requests.shopName')}</div>
                 <div className="data-kv-value">{selectedRequest.shopName}</div>
 
-                <div className="data-kv-label">Reference Code</div>
+                <div className="data-kv-label">{t('requests.referenceCode')}</div>
                 <div className="data-kv-value mono-text">{selectedRequest.referenceCode}</div>
 
-                <div className="data-kv-label">Preferred Slug</div>
+                <div className="data-kv-label">{t('requests.tenantSlug')}</div>
                 <div className="data-kv-value mono-text">
-                  {selectedRequest.preferredShopCode || 'Auto-generated'}
+                  {selectedRequest.preferredShopCode || (language === 'am' ? 'በራሱ የሚፈጠር' : 'Auto-generated')}
                 </div>
 
-                <div className="data-kv-label">Business Address</div>
+                <div className="data-kv-label">{t('requests.address')}</div>
                 <div className="data-kv-value">
-                  {selectedRequest.businessAddress || 'Not provided'}
+                  {selectedRequest.businessAddress || (language === 'am' ? 'አልተጠቀሰም' : 'Not provided')}
                 </div>
 
-                <div className="data-kv-label">Operating Currency</div>
+                <div className="data-kv-label">{t('tenants.currency')}</div>
                 <div className="data-kv-value">{selectedRequest.currency || 'ETB'}</div>
               </div>
             </div>
@@ -331,21 +325,21 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             <div className="card detail-card">
               <div className="detail-card-head">
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Mail size={16} style={{ color: 'var(--teal)' }} /> Applicant Contact Information
+                  <Mail size={16} style={{ color: 'var(--teal)' }} /> {language === 'am' ? 'የአመልካች አድራሻ መረጃ' : 'Applicant Contact Information'}
                 </h3>
               </div>
 
               <div className="data-kv-grid">
-                <div className="data-kv-label">Owner Full Name</div>
+                <div className="data-kv-label">{t('requests.ownerName')}</div>
                 <div className="data-kv-value">{selectedRequest.ownerFullName}</div>
 
-                <div className="data-kv-label">Email Address</div>
+                <div className="data-kv-label">{t('requests.email')}</div>
                 <div className="data-kv-value">{selectedRequest.ownerEmail}</div>
 
-                <div className="data-kv-label">Phone Number</div>
-                <div className="data-kv-value">{selectedRequest.ownerPhone || 'Not provided'}</div>
+                <div className="data-kv-label">{t('requests.phone')}</div>
+                <div className="data-kv-value">{selectedRequest.ownerPhone || (language === 'am' ? 'አልተጠቀሰም' : 'Not provided')}</div>
 
-                <div className="data-kv-label">Submission Date</div>
+                <div className="data-kv-label">{t('requests.submitted')}</div>
                 <div className="data-kv-value">{formatDate(selectedRequest.createdAt)}</div>
               </div>
             </div>
@@ -354,11 +348,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             <div className="card detail-card">
               <div className="detail-card-head">
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileText size={16} style={{ color: 'var(--teal)' }} /> Applicant Notes &amp; Trade Details
+                  <FileText size={16} style={{ color: 'var(--teal)' }} /> {language === 'am' ? 'የአመልካች ማስታወሻ' : 'Applicant Notes & Trade Details'}
                 </h3>
               </div>
               <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text)', lineHeight: 1.6 }}>
-                {selectedRequest.applicantNotes || 'No supplementary trade notes provided by applicant.'}
+                {selectedRequest.applicantNotes || (language === 'am' ? 'ምንም ተጨማሪ ማስታወሻ አልቀረበም።' : 'No supplementary trade notes provided by applicant.')}
               </p>
             </div>
           </div>
@@ -367,11 +361,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
           <div>
             <div className="card" style={{ marginBottom: '20px' }}>
               <div className="detail-card-head">
-                <h3>Subscription Tier Selection</h3>
+                <h3>{t('plans.title')}</h3>
               </div>
               <div style={{ marginBottom: '14px' }}>
                 <span style={{ fontSize: '12px', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-                  Requested Plan
+                  {t('requests.plan')}
                 </span>
                 <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)', marginTop: '4px' }}>
                   {selectedRequest.requestedPlanCode || 'STARTER'}
@@ -392,7 +386,11 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 }}
               >
                 <CheckCircle2 size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                <span>Default 14-day commercial trial will be automatically provisioned upon approval.</span>
+                <span>
+                  {language === 'am'
+                    ? 'ጥያቄው ሲጸድቅ የ 14 ቀናት ነጻ የሙከራ ጊዜ በራሱ ይሰጣል።'
+                    : 'Default 14-day commercial trial will be automatically provisioned upon approval.'}
+                </span>
               </div>
             </div>
 
@@ -401,16 +399,16 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
               <div className="card">
                 <div className="detail-card-head">
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Calendar size={16} style={{ color: 'var(--muted)' }} /> Application Timeline
+                    <Calendar size={16} style={{ color: 'var(--muted)' }} /> {language === 'am' ? 'የግምገማ ታሪክ' : 'Application Timeline'}
                   </h3>
                 </div>
                 <div className="data-kv-grid" style={{ gridTemplateColumns: '100px 1fr' }}>
-                  <div className="data-kv-label">Reviewed On</div>
+                  <div className="data-kv-label">{language === 'am' ? 'የተገመገመበት' : 'Reviewed On'}</div>
                   <div className="data-kv-value">{formatDate(selectedRequest.reviewedAt)}</div>
 
-                  <div className="data-kv-label">Reviewer Notes</div>
+                  <div className="data-kv-label">{t('requests.reviewerNotes')}</div>
                   <div className="data-kv-value">
-                    {selectedRequest.reviewerNotes || 'No notes logged.'}
+                    {selectedRequest.reviewerNotes || (language === 'am' ? 'ምንም ማስታወሻ የለም' : 'No notes logged.')}
                   </div>
                 </div>
               </div>
@@ -421,8 +419,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
         {/* Approval Modal */}
         {showApproveModal && (
           <Modal
-            title={`Approve ${selectedRequest.shopName}?`}
-            subtitle={`Reference: ${selectedRequest.referenceCode}`}
+            title={`${selectedRequest.shopName} ${t('requests.approve')}?`}
+            subtitle={`${t('requests.referenceCode')}: ${selectedRequest.referenceCode}`}
             onClose={() => setShowApproveModal(false)}
           >
             <div
@@ -442,16 +440,17 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             >
               <ShieldCheck size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <strong>Atomic Provisioning Guarantee:</strong>
+                <strong>{language === 'am' ? 'አስተማማኝ የምዝገባ ዋስትና:' : 'Atomic Provisioning Guarantee:'}</strong>
                 <br />
-                The system will automatically create the shop organization, generate initial staff credentials for{' '}
-                <strong>{selectedRequest.ownerEmail}</strong>, and provision a trial subscription in a single atomic database transaction.
+                {language === 'am'
+                  ? `ሲስተሙ የሱቁን ድርጅት፣ ለ ${selectedRequest.ownerEmail} የመጀመሪያ የአስተዳዳሪ መለያ፣ እና የሙከራ ደንበኝነት በአንድነት ይፈጥራል።`
+                  : `The system will automatically create the shop organization, generate initial staff credentials for ${selectedRequest.ownerEmail}, and provision a trial subscription in a single atomic database transaction.`}
               </div>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="custom-shop-code">
-                Custom Tenant Slug (Optional)
+                {t('requests.customShopCode')}
               </label>
               <input
                 id="custom-shop-code"
@@ -462,17 +461,17 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 onChange={(e) => setCustomShopCode(e.target.value)}
                 disabled={approving}
               />
-              <p className="form-help">Leave blank to use the applicant&apos;s preferred slug or auto-generate.</p>
+              <p className="form-help">{t('requests.customShopCodeHelp')}</p>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="reviewer-notes">
-                Approval Notes (Internal Notes)
+                {t('requests.reviewerNotes')}
               </label>
               <textarea
                 id="reviewer-notes"
                 className="form-textarea"
-                placeholder="Verified building materials license and contact details."
+                placeholder={language === 'am' ? 'የንግድ ፈቃድ እና አድራሻ ተረጋግጧል።' : 'Verified building materials license and contact details.'}
                 value={approveNotes}
                 onChange={(e) => setApproveNotes(e.target.value)}
                 disabled={approving}
@@ -486,7 +485,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 onClick={() => setShowApproveModal(false)}
                 disabled={approving}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -494,7 +493,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 onClick={handleApprove}
                 disabled={approving}
               >
-                {approving ? 'Provisioning Tenant...' : 'Confirm Approval & Provision'}
+                {approving ? t('requests.approving') : (language === 'am' ? 'አጽድቅ እና ፍጠር' : 'Confirm Approval & Provision')}
               </button>
             </div>
           </Modal>
@@ -503,8 +502,8 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
         {/* Rejection Modal */}
         {showRejectModal && (
           <Modal
-            title={`Reject ${selectedRequest.shopName}?`}
-            subtitle={`Reference: ${selectedRequest.referenceCode}`}
+            title={`${selectedRequest.shopName} ${t('requests.reject')}?`}
+            subtitle={`${t('requests.referenceCode')}: ${selectedRequest.referenceCode}`}
             onClose={() => setShowRejectModal(false)}
           >
             <div
@@ -524,27 +523,27 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
             >
               <AlertTriangle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
-                <strong>Rejection Notice:</strong>
+                <strong>{t('requests.rejectTitle')}</strong>
                 <br />
-                The application will be marked as REJECTED. The applicant will not receive tenant access, and this decision will be permanently recorded in the system.
+                {t('requests.rejectDesc')}
               </div>
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="rejection-reason">
-                Rejection Reason <span className="required">*</span>
+                {t('requests.rejectReason')} <span className="required">*</span>
               </label>
               <textarea
                 id="rejection-reason"
                 className="form-textarea"
-                placeholder="Explain why the registration request was rejected (e.g. unverified business license, duplicate shop)..."
+                placeholder={language === 'am' ? 'ጥያቄው ውድቅ የተደረገበትን ምክንያት ያስረዱ...' : 'Explain why the registration request was rejected...'}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 required
                 disabled={rejecting}
               />
               {!rejectReason.trim() && (
-                <p className="form-error">A mandatory reason is required by backend business rules.</p>
+                <p className="form-error">{t('requests.rejectReasonRequired')}</p>
               )}
             </div>
 
@@ -555,7 +554,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 onClick={() => setShowRejectModal(false)}
                 disabled={rejecting}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -563,7 +562,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                 onClick={handleReject}
                 disabled={rejecting || !rejectReason.trim()}
               >
-                {rejecting ? 'Rejecting Request...' : 'Confirm Rejection'}
+                {rejecting ? t('requests.rejecting') : t('requests.reject')}
               </button>
             </div>
           </Modal>
@@ -576,13 +575,13 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
   const columns: Column<OnboardingDetailResponse>[] = [
     {
       key: 'referenceCode',
-      header: 'Reference',
+      header: t('requests.referenceCode'),
       width: '130px',
       render: (r) => <span className="mono-text">{r.referenceCode}</span>,
     },
     {
       key: 'shopName',
-      header: 'Shop & Applicant',
+      header: t('requests.shopName'),
       render: (r) => (
         <div>
           <div style={{ fontWeight: 700, color: 'var(--ink)' }}>{r.shopName}</div>
@@ -592,7 +591,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
     },
     {
       key: 'contact',
-      header: 'Contact Info',
+      header: language === 'am' ? 'የአድራሻ መረጃ' : 'Contact Info',
       render: (r) => (
         <div style={{ fontSize: '12.5px' }}>
           <div>{r.ownerEmail}</div>
@@ -602,7 +601,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
     },
     {
       key: 'requestedPlanCode',
-      header: 'Requested Plan',
+      header: t('requests.plan'),
       render: (r) => (
         <span style={{ fontWeight: 600, color: 'var(--ink-2)', fontSize: '13px' }}>
           {r.requestedPlanCode || 'Standard'}
@@ -611,12 +610,12 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
     },
     {
       key: 'createdAt',
-      header: 'Submitted',
+      header: t('requests.submitted'),
       render: (r) => <span style={{ fontSize: '12.5px' }}>{formatDate(r.createdAt)}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('common.status'),
       render: (r) => <StatusBadge status={r.status} />,
     },
     {
@@ -629,7 +628,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
           className="btn btn-secondary btn-sm"
           onClick={() => setSelectedRequest(r)}
         >
-          Review
+          {t('requests.viewDetails')}
         </button>
       ),
     },
@@ -638,9 +637,9 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
   return (
     <div>
       <PageHead
-        eyebrow="Merchant Inbound Queue"
-        title="Registration Requests"
-        description="Review, verify, and approve public shop registration applications before tenant workspace provisioning."
+        eyebrow={t('requests.eyebrow')}
+        title={t('requests.title')}
+        description={t('requests.description')}
       />
 
       {banner && (
@@ -662,7 +661,7 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
         totalPages={totalPages}
         totalElements={totalElements}
         onPageChange={setPage}
-        searchPlaceholder="Search by shop name, owner, or reference..."
+        searchPlaceholder={t('requests.searchPlaceholder')}
         searchValue={search}
         onSearchChange={(val) => {
           setSearch(val);
@@ -680,13 +679,15 @@ export const RequestsPage: React.FC<RequestsPageProps> = ({ onRequestsUpdated })
                   setPage(0);
                 }}
               >
-                {st === 'ALL' ? 'All Requests' : st.charAt(0) + st.slice(1).toLowerCase()}
+                {st === 'ALL'
+                  ? t('requests.allStatuses')
+                  : t(`status.${st}`)}
               </button>
             ))}
           </div>
         }
-        emptyTitle="No registration requests found"
-        emptyMessage="There are currently no onboarding applications matching this search or status filter."
+        emptyTitle={language === 'am' ? 'ምንም የምዝገባ ጥያቄ አልተገኘም' : 'No registration requests found'}
+        emptyMessage={language === 'am' ? 'የተመረጠውን ሁኔታ የሚያሟላ የምዝገባ ጥያቄ የለም።' : 'There are currently no onboarding applications matching this search or status filter.'}
         rowKey={(r) => r.id}
       />
     </div>
