@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Building2, User, LogOut, KeyRound, Lock, Menu } from 'lucide-react';
+import { Building2, User, KeyRound, Menu, Languages } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from './Modal';
 import { Alert } from './Alert';
 import { shopApi } from '../api/client';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ShopTopbarProps {
   pageTitle: string;
@@ -11,7 +12,8 @@ interface ShopTopbarProps {
 }
 
 export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSidebar }) => {
-  const { user, activeTenant, switchTenant, logout } = useAuth();
+  const { user, activeTenant, switchTenant } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
 
   // Change Password State
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -37,17 +39,17 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
     setSuccessMsg(null);
 
     if (!currentPassword) {
-      setErrorMsg('Please enter your current password.');
+      setErrorMsg(t('topbar.currentPasswordRequired'));
       return;
     }
 
     if (!newPassword || newPassword.length < 6) {
-      setErrorMsg('New password must be at least 6 characters.');
+      setErrorMsg(t('topbar.passwordMinLength'));
       return;
     }
 
-    if (newPassword !== confirmPassword) {
-      setErrorMsg('New password and confirmation do not match.');
+    if (!newPassword !== !confirmPassword || newPassword !== confirmPassword) {
+      setErrorMsg(t('topbar.passwordMismatch'));
       return;
     }
 
@@ -57,7 +59,7 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
         currentPassword,
         newPassword,
       });
-      setSuccessMsg('Your password has been changed successfully. Use it next time you log in.');
+      setSuccessMsg(t('topbar.passwordChanged'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -65,11 +67,28 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
         setIsChangePasswordOpen(false);
         setSuccessMsg(null);
       }, 2000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to change password. Please check your current password.');
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : (language === 'am' ? 'የይለፍ ቃል መቀየር አልተቻለም።' : 'Failed to change password.'));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const resolveRoleLabel = (r?: string) => {
+    if (!r) return '';
+    if (language === 'am') {
+      switch (r.toUpperCase()) {
+        case 'OWNER':
+          return t('topbar.roleOwner');
+        case 'MANAGER':
+          return t('topbar.roleManager');
+        case 'CASHIER':
+          return t('topbar.roleCashier');
+        default:
+          return t('topbar.roleStaff');
+      }
+    }
+    return r;
   };
 
   return (
@@ -81,8 +100,8 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
               type="button"
               className="mobile-menu-btn"
               onClick={onToggleSidebar}
-              title="Open Navigation Menu"
-              aria-label="Open Navigation Menu"
+              title={language === 'am' ? 'የአሰሳ ማውጫውን ክፈት' : 'Open Navigation Menu'}
+              aria-label={language === 'am' ? 'የአሰሳ ማውጫውን ክፈት' : 'Open Navigation Menu'}
             >
               <Menu size={20} />
             </button>
@@ -100,10 +119,11 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
                 value={activeTenant?.tenantId}
                 onChange={(e) => switchTenant(e.target.value)}
                 style={{ height: '34px', fontSize: '12.5px', padding: '0 8px' }}
+                title={t('topbar.shopSwitcher')}
               >
                 {user.memberships.map((m) => (
                   <option key={m.tenantId} value={m.tenantId}>
-                    {m.tenantName} ({m.role})
+                    {m.tenantName} ({resolveRoleLabel(m.role)})
                   </option>
                 ))}
               </select>
@@ -137,7 +157,7 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
                 textTransform: 'uppercase',
               }}
             >
-              {activeTenant?.role}
+              {resolveRoleLabel(activeTenant?.role)}
             </span>
           </div>
 
@@ -145,119 +165,101 @@ export const ShopTopbar: React.FC<ShopTopbarProps> = ({ pageTitle, onToggleSideb
             type="button"
             className="btn-secondary btn-sm"
             onClick={handleOpenChangePassword}
-            title="Change Account Password"
+            title={t('topbar.changePassword')}
             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <KeyRound size={14} color="var(--teal)" />
-            <span>Change Password</span>
+            <span>{t('topbar.changePassword')}</span>
           </button>
 
+          {/* Localization Switcher Button (Replaces Logout Button on the Top Right) */}
           <button
             type="button"
-            className="btn-secondary btn-sm"
-            onClick={logout}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            onClick={toggleLanguage}
+            className="topbar-lang-btn"
+            title={language === 'am' ? 'Switch interface to English' : 'የሱቅ በይነገጹን ወደ አማርኛ ቀይር'}
+            aria-label={t('topbar.switchLanguage')}
           >
-            <LogOut size={14} />
-            <span>Logout</span>
+            <Languages size={15} className="lang-icon" />
+            <span className="lang-label">{language === 'am' ? 'አማርኛ' : 'English'}</span>
+            <span className="lang-code-pill">{language === 'am' ? 'AM' : 'EN'}</span>
           </button>
         </div>
       </header>
 
       {/* Change Password Modal */}
-      {isChangePasswordOpen && (
-        <Modal
-          isOpen={true}
-          title="Change Account Password"
-          onClose={() => setIsChangePasswordOpen(false)}
-          footer={
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setIsChangePasswordOpen(false)}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleChangePasswordSubmit}
-                disabled={isSubmitting || !currentPassword || !newPassword || newPassword.length < 6 || newPassword !== confirmPassword}
-              >
-                {isSubmitting ? 'Updating...' : 'Update Password'}
-              </button>
-            </div>
-          }
-        >
-          <form onSubmit={handleChangePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {errorMsg && (
-              <Alert type="error" message={errorMsg} onDismiss={() => setErrorMsg(null)} />
-            )}
-            {successMsg && (
-              <Alert type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
-            )}
+      <Modal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+        title={t('topbar.changePasswordTitle')}
+      >
+        <form onSubmit={handleChangePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {errorMsg && (
+            <Alert type="error" message={errorMsg} onDismiss={() => setErrorMsg(null)} />
+          )}
+          {successMsg && (
+            <Alert type="success" message={successMsg} onDismiss={() => setSuccessMsg(null)} />
+          )}
 
-            <p style={{ fontSize: '13px', color: 'var(--muted)', margin: 0 }}>
-              Update your account password for <strong>{user?.email}</strong>.
-            </p>
+          <div className="form-group">
+            <label className="form-label">{t('topbar.currentPassword')}</label>
+            <input
+              type="password"
+              className="form-input"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              autoFocus
+              required
+            />
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Current Password *</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={15} color="var(--muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="password"
-                  className="form-input"
-                  style={{ width: '100%', paddingLeft: '36px' }}
-                  placeholder="Enter current password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  autoComplete="current-password"
-                  required
-                />
-              </div>
-            </div>
+          <div className="form-group">
+            <label className="form-label">{t('topbar.newPassword')}</label>
+            <input
+              type="password"
+              className="form-input"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder={language === 'am' ? 'ቢያንስ 6 ፊደላት' : 'Min 6 characters'}
+              disabled={isSubmitting}
+              required
+            />
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">New Password *</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={15} color="var(--muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="password"
-                  className="form-input"
-                  style={{ width: '100%', paddingLeft: '36px' }}
-                  placeholder="At least 6 characters"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  autoComplete="new-password"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
+          <div className="form-group">
+            <label className="form-label">{t('topbar.confirmPassword')}</label>
+            <input
+              type="password"
+              className="form-input"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              required
+            />
+          </div>
 
-            <div className="form-group">
-              <label className="form-label">Confirm New Password *</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={15} color="var(--muted)" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-                <input
-                  type="password"
-                  className="form-input"
-                  style={{ width: '100%', paddingLeft: '36px' }}
-                  placeholder="Re-enter new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  autoComplete="new-password"
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
-          </form>
-        </Modal>
-      )}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setIsChangePasswordOpen(false)}
+              disabled={isSubmitting}
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? t('topbar.submittingPassword') : t('topbar.changePassword')}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 };
