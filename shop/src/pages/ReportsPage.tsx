@@ -21,9 +21,11 @@ import {
   CategoryResponse,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const ReportsPage: React.FC = () => {
   const { role } = useAuth();
+  const { t, formatCurrency, formatDate, language } = useLanguage();
   const isCashier = role === 'CASHIER';
 
   const [activeTab, setActiveTab] = useState<'sales' | 'inventory'>('sales');
@@ -79,14 +81,6 @@ export const ReportsPage: React.FC = () => {
   useEffect(() => {
     fetchReports();
   }, [activeTab, dateRange]);
-
-  const formatCurrency = (val?: number) => {
-    if (val == null) return '—';
-    return `Br ${Number(val).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
 
   // Filtered product balances for valuation table
   const filteredBalances = useMemo(() => {
@@ -161,9 +155,9 @@ export const ReportsPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Business Intelligence"
-        title="Operational & Financial Reports"
-        subtitle="Sales revenue analytics, daily intervals, profit margins, and total inventory stock value"
+        eyebrow={language === 'am' ? 'የንግድ መረጃ እና ትንታኔ' : 'Business Intelligence'}
+        title={t.reports.title}
+        subtitle={t.reports.subtitle}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             {activeTab === 'inventory' && (
@@ -172,19 +166,19 @@ export const ReportsPage: React.FC = () => {
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={handleExportCsv}
-                  title="Export valuation report as CSV"
+                  title={language === 'am' ? 'የዋጋ ሪፖርት በCSV አውርድ' : 'Export valuation report as CSV'}
                 >
                   <Download size={14} />
-                  <span>Export CSV</span>
+                  <span>{language === 'am' ? 'CSV አውርድ' : 'Export CSV'}</span>
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={handlePrint}
-                  title="Print valuation report"
+                  title={language === 'am' ? 'የዋጋ ሪፖርት አትም' : 'Print valuation report'}
                 >
                   <Printer size={14} />
-                  <span>Print Report</span>
+                  <span>{t.common.print}</span>
                 </button>
               </>
             )}
@@ -195,7 +189,7 @@ export const ReportsPage: React.FC = () => {
               disabled={isLoading}
             >
               <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-              <span>Refresh</span>
+              <span>{t.common.refresh}</span>
             </button>
           </div>
         }
@@ -219,8 +213,9 @@ export const ReportsPage: React.FC = () => {
         >
           <ShieldAlert size={18} />
           <span>
-            Cashier view active: Product cost of items sold, profit margins, and inventory stock valuations are
-            confidential and redacted.
+            {language === 'am'
+              ? 'የገንዘብ ተቀባይ እይታ ነቅቷል፡ የተሸጡ እቃዎች ወጪ፣ የትርፍ ህዳግ እና የክምችት ዋጋዎች ሚስጥራዊ በመሆናቸው ተደብቀዋል።'
+              : 'Cashier view active: Product cost of items sold, profit margins, and inventory stock valuations are confidential and redacted.'}
           </span>
         </div>
       )}
@@ -234,7 +229,7 @@ export const ReportsPage: React.FC = () => {
             onClick={() => setActiveTab('sales')}
           >
             <TrendingUp size={14} />
-            <span>Sales & Revenue Summary</span>
+            <span>{language === 'am' ? 'የሽያጭ እና ገቢ ማጠቃለያ' : 'Sales & Revenue Summary'}</span>
           </button>
           <button
             type="button"
@@ -242,7 +237,7 @@ export const ReportsPage: React.FC = () => {
             onClick={() => setActiveTab('inventory')}
           >
             <Scale size={14} />
-            <span>Total Stock Valuation</span>
+            <span>{t.reports.valuationReport}</span>
           </button>
         </div>
 
@@ -255,9 +250,9 @@ export const ReportsPage: React.FC = () => {
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value as any)}
             >
-              <option value="7">Last 7 Days</option>
-              <option value="30">Last 30 Days</option>
-              <option value="90">Last 90 Days</option>
+              <option value="7">{language === 'am' ? 'ያለፉት 7 ቀናት' : 'Last 7 Days'}</option>
+              <option value="30">{language === 'am' ? 'ያለፉት 30 ቀናት' : 'Last 30 Days'}</option>
+              <option value="90">{language === 'am' ? 'ያለፉት 90 ቀናት' : 'Last 90 Days'}</option>
             </select>
           </div>
         )}
@@ -269,27 +264,27 @@ export const ReportsPage: React.FC = () => {
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-card-header">
-                <span>Total Revenue</span>
+                <span>{language === 'am' ? 'ጠቅላላ ገቢ' : 'Total Revenue'}</span>
                 <div className="stat-card-icon" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
                   <Coins size={20} />
                 </div>
               </div>
               <div className="stat-card-value">{formatCurrency(salesSummary?.totalRevenue || 0)}</div>
               <div className="stat-card-footer">
-                <span>Total finalized customer sales</span>
+                <span>{language === 'am' ? 'የተጠናቀቀ የደንበኞች ሽያጭ ድምር' : 'Total finalized customer sales'}</span>
               </div>
             </div>
 
             <div className="stat-card">
               <div className="stat-card-header">
-                <span>Sales Completed</span>
+                <span>{language === 'am' ? 'የተጠናቀቁ ሽያጮች' : 'Sales Completed'}</span>
                 <div className="stat-card-icon" style={{ background: '#eef6f9', color: 'var(--blue)' }}>
                   <TrendingUp size={20} />
                 </div>
               </div>
               <div className="stat-card-value">{salesSummary?.totalSalesCount || 0}</div>
               <div className="stat-card-footer">
-                <span>Avg Basket: {formatCurrency(salesSummary?.averageBasketValue || 0)}</span>
+                <span>{language === 'am' ? 'አማካይ ቅርጫት:' : 'Avg Basket:'} {formatCurrency(salesSummary?.averageBasketValue || 0)}</span>
               </div>
             </div>
 
@@ -297,7 +292,7 @@ export const ReportsPage: React.FC = () => {
               <>
                 <div className="stat-card">
                   <div className="stat-card-header">
-                    <span>Gross Profit</span>
+                    <span>{language === 'am' ? 'ጠቅላላ ትርፍ' : 'Gross Profit'}</span>
                     <div className="stat-card-icon" style={{ background: '#e8f5ee', color: 'var(--success)' }}>
                       <TrendingUp size={20} />
                     </div>
@@ -306,20 +301,20 @@ export const ReportsPage: React.FC = () => {
                     {formatCurrency(salesSummary?.grossProfit || 0)}
                   </div>
                   <div className="stat-card-footer">
-                    <span>Margin: {salesSummary?.grossMarginPercentage?.toFixed(1) || '0.0'}%</span>
+                    <span>{language === 'am' ? 'ህዳግ:' : 'Margin:'} {salesSummary?.grossMarginPercentage?.toFixed(1) || '0.0'}%</span>
                   </div>
                 </div>
 
                 <div className="stat-card">
                   <div className="stat-card-header">
-                    <span>Cost of Goods Sold</span>
+                    <span>{language === 'am' ? 'የተሸጡ ዕቃዎች ወጪ' : 'Cost of Goods Sold'}</span>
                     <div className="stat-card-icon" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
                       <Scale size={20} />
                     </div>
                   </div>
                   <div className="stat-card-value">{formatCurrency(salesSummary?.totalCost || 0)}</div>
                   <div className="stat-card-footer">
-                    <span>Average purchase cost of items sold</span>
+                    <span>{language === 'am' ? 'የተሸጡ ዕቃዎች አማካይ የግዢ ወጪ' : 'Average purchase cost of items sold'}</span>
                   </div>
                 </div>
               </>
@@ -329,19 +324,19 @@ export const ReportsPage: React.FC = () => {
           {/* Daily Breakdown Table */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
-              Daily Sales Interval Breakdown
+              {t.reports.dailySummary}
             </h2>
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th style={{ textAlign: 'center' }}>Transactions</th>
-                    <th style={{ textAlign: 'right' }}>Revenue</th>
+                    <th>{t.common.date}</th>
+                    <th style={{ textAlign: 'center' }}>{language === 'am' ? 'ግብይቶች' : 'Transactions'}</th>
+                    <th style={{ textAlign: 'right' }}>{t.dashboard.totalAmount}</th>
                     {!isCashier && (
                       <>
-                        <th style={{ textAlign: 'right' }}>Cost of Goods Sold</th>
-                        <th style={{ textAlign: 'right' }}>Gross Profit</th>
+                        <th style={{ textAlign: 'right' }}>{language === 'am' ? 'የተሸጡ ዕቃዎች ወጪ' : 'Cost of Goods Sold'}</th>
+                        <th style={{ textAlign: 'right' }}>{language === 'am' ? 'ጠቅላላ ትርፍ' : 'Gross Profit'}</th>
                       </>
                     )}
                   </tr>
@@ -350,19 +345,19 @@ export const ReportsPage: React.FC = () => {
                   {isLoading ? (
                     <tr>
                       <td colSpan={isCashier ? 3 : 5} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                        Calculating sales metrics...
+                        {t.common.loading}
                       </td>
                     </tr>
                   ) : dailySales.length === 0 ? (
                     <tr>
                       <td colSpan={isCashier ? 3 : 5} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                        No sales recorded during this date window.
+                        {language === 'am' ? 'በዚህ የጊዜ ገደብ ውስጥ ምንም ሽያጭ አልተመዘገበም።' : 'No sales recorded during this date window.'}
                       </td>
                     </tr>
                   ) : (
                     dailySales.map((day, idx) => (
                       <tr key={idx}>
-                        <td style={{ fontWeight: 700 }}>{day.date}</td>
+                        <td style={{ fontWeight: 700 }}>{formatDate(day.date)}</td>
                         <td style={{ textAlign: 'center' }}>{day.salesCount}</td>
                         <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatCurrency(day.revenue)}</td>
                         {!isCashier && (
@@ -387,7 +382,7 @@ export const ReportsPage: React.FC = () => {
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-card-header">
-                <span>Total Catalog Products</span>
+                <span>{language === 'am' ? 'ጠቅላላ የካታሎግ ምርቶች' : 'Total Catalog Products'}</span>
                 <div className="stat-card-icon" style={{ background: '#eef6f9', color: 'var(--blue)' }}>
                   <Layers size={20} />
                 </div>
@@ -396,13 +391,13 @@ export const ReportsPage: React.FC = () => {
                 {valuationReport?.totalProducts || valuationReport?.totalSkus || balances.length}
               </div>
               <div className="stat-card-footer">
-                <span>SKUs tracked in shop inventory</span>
+                <span>{language === 'am' ? 'በሱቁ ክምችት ውስጥ የተመዘገቡ SKUዎች' : 'SKUs tracked in shop inventory'}</span>
               </div>
             </div>
 
             <div className="stat-card">
               <div className="stat-card-header">
-                <span>Total Base Units on Hand</span>
+                <span>{language === 'am' ? 'በእጅ ላይ ያሉ መነሻ መለኪያዎች' : 'Total Base Units on Hand'}</span>
                 <div className="stat-card-icon" style={{ background: 'var(--teal-soft)', color: 'var(--teal)' }}>
                   <Scale size={20} />
                 </div>
@@ -412,14 +407,14 @@ export const ReportsPage: React.FC = () => {
                   balances.reduce((acc, b) => acc + Number(b.quantityOnHand || 0), 0).toFixed(0)}
               </div>
               <div className="stat-card-footer">
-                <span>Aggregated physical quantity</span>
+                <span>{language === 'am' ? 'አጠቃላይ አካላዊ ብዛት' : 'Aggregated physical quantity'}</span>
               </div>
             </div>
 
             {!isCashier && (
               <div className="stat-card" style={{ gridColumn: 'span 2' }}>
                 <div className="stat-card-header">
-                  <span>Total Warehouse Stock Value</span>
+                  <span>{t.reports.totalValuation}</span>
                   <div className="stat-card-icon" style={{ background: '#e8f5ee', color: 'var(--success)' }}>
                     <Coins size={20} />
                   </div>
@@ -431,7 +426,7 @@ export const ReportsPage: React.FC = () => {
                   )}
                 </div>
                 <div className="stat-card-footer">
-                  <span>Calculated via moving average purchase cost per product</span>
+                  <span>{language === 'am' ? 'በእያንዳንዱ ምርት አማካይ የግዢ ወጪ ተሰልቷል' : 'Calculated via moving average purchase cost per product'}</span>
                 </div>
               </div>
             )}
@@ -440,29 +435,29 @@ export const ReportsPage: React.FC = () => {
           {/* Category Valuation Summary Card */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
-              Valuation Breakdown by Category
+              {language === 'am' ? 'የክምችት ዋጋ በምድብ' : 'Valuation Breakdown by Category'}
             </h2>
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Category</th>
-                    <th style={{ textAlign: 'center' }}>Product Count</th>
-                    <th style={{ textAlign: 'center' }}>Total Quantity</th>
-                    {!isCashier && <th style={{ textAlign: 'right' }}>Total Stock Value (Br)</th>}
+                    <th>{t.products.category}</th>
+                    <th style={{ textAlign: 'center' }}>{t.categories.productCount}</th>
+                    <th style={{ textAlign: 'center' }}>{t.common.quantity}</th>
+                    {!isCashier && <th style={{ textAlign: 'right' }}>{t.reports.totalValuation} ({t.common.currencySymbol})</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
                       <td colSpan={isCashier ? 3 : 4} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                        Computing valuation breakdown...
+                        {t.common.loading}
                       </td>
                     </tr>
                   ) : !valuationReport?.categories || valuationReport.categories.length === 0 ? (
                     <tr>
                       <td colSpan={isCashier ? 3 : 4} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                        No category valuation data available.
+                        {language === 'am' ? 'ምንም የምድብ ዋጋ መረጃ የለም።' : 'No category valuation data available.'}
                       </td>
                     </tr>
                   ) : (
@@ -488,9 +483,9 @@ export const ReportsPage: React.FC = () => {
           <div className="card">
             <div className="card-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 className="card-title">Product Inventory Valuation</h2>
+                <h2 className="card-title">{language === 'am' ? 'የእያንዳንዱ ምርት የክምችት ዋጋ' : 'Product Inventory Valuation'}</h2>
                 <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
-                  Product-level available quantities, average purchase costs, and valuation breakdown
+                  {language === 'am' ? 'የምርት ደረጃ ዝግጁ ብዛት፣ አማካይ የግዢ ወጪ እና የዋጋ ዝርዝር' : 'Product-level available quantities, average purchase costs, and valuation breakdown'}
                 </div>
               </div>
 
@@ -502,7 +497,7 @@ export const ReportsPage: React.FC = () => {
                     type="text"
                     className="form-input"
                     style={{ height: '34px', paddingLeft: '30px', width: '180px', fontSize: '12.5px' }}
-                    placeholder="Search product / SKU..."
+                    placeholder={language === 'am' ? 'ምርት / SKU ፈልግ...' : 'Search product / SKU...'}
                     value={valSearch}
                     onChange={(e) => setValSearch(e.target.value)}
                   />
@@ -514,7 +509,7 @@ export const ReportsPage: React.FC = () => {
                   value={valCategory}
                   onChange={(e) => setValCategory(e.target.value)}
                 >
-                  <option value="">All Categories</option>
+                  <option value="">{t.pos.allCategories}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -528,10 +523,10 @@ export const ReportsPage: React.FC = () => {
                   value={valStatus}
                   onChange={(e) => setValStatus(e.target.value as any)}
                 >
-                  <option value="ALL">All Stock Statuses</option>
-                  <option value="IN_STOCK">In Stock Only</option>
-                  <option value="LOW_STOCK">Low Stock Only</option>
-                  <option value="OUT_OF_STOCK">Out of Stock Only</option>
+                  <option value="ALL">{language === 'am' ? 'ሁሉም የክምችት ሁኔታዎች' : 'All Stock Statuses'}</option>
+                  <option value="IN_STOCK">{t.products.inStock}</option>
+                  <option value="LOW_STOCK">{t.products.lowStock}</option>
+                  <option value="OUT_OF_STOCK">{t.products.outOfStock}</option>
                 </select>
               </div>
             </div>
@@ -540,30 +535,30 @@ export const ReportsPage: React.FC = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Product Name</th>
-                    <th>Category</th>
-                    <th style={{ textAlign: 'right' }}>Available Quantity</th>
-                    <th>Base Unit</th>
+                    <th>{t.products.name}</th>
+                    <th>{t.products.category}</th>
+                    <th style={{ textAlign: 'right' }}>{language === 'am' ? 'ዝግጁ መጠን' : 'Available Quantity'}</th>
+                    <th>{t.products.baseUnit}</th>
                     {!isCashier && (
                       <>
-                        <th style={{ textAlign: 'right' }}>Average Purchase Cost</th>
-                        <th style={{ textAlign: 'right' }}>Total Stock Value</th>
+                        <th style={{ textAlign: 'right' }}>{language === 'am' ? 'አማካይ የግዢ ወጪ' : 'Average Purchase Cost'}</th>
+                        <th style={{ textAlign: 'right' }}>{t.reports.totalValuation}</th>
                       </>
                     )}
-                    <th style={{ textAlign: 'center' }}>Stock Status</th>
+                    <th style={{ textAlign: 'center' }}>{t.common.status}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
                       <td colSpan={isCashier ? 5 : 7} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                        Loading inventory balances...
+                        {t.common.loading}
                       </td>
                     </tr>
                   ) : filteredBalances.length === 0 ? (
                     <tr>
                       <td colSpan={isCashier ? 5 : 7} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                        No inventory records match the selected filters.
+                        {language === 'am' ? 'ከተመረጡት ማጣሪያዎች ጋር የሚዛመድ መዝገብ የለም።' : 'No inventory records match the selected filters.'}
                       </td>
                     </tr>
                   ) : (
@@ -580,7 +575,7 @@ export const ReportsPage: React.FC = () => {
                             <div style={{ fontWeight: 700 }}>{item.productName}</div>
                             <div style={{ fontSize: '11px', color: 'var(--muted)' }}>SKU: {item.productSku || item.sku}</div>
                           </td>
-                          <td>{item.categoryName || 'General'}</td>
+                          <td>{item.categoryName || (language === 'am' ? 'ጠቅላላ' : 'General')}</td>
                           <td style={{ textAlign: 'right', fontWeight: 700 }}>
                             {qty.toFixed(2)}
                           </td>
@@ -594,7 +589,7 @@ export const ReportsPage: React.FC = () => {
                                   formatCurrency(avgCost)
                                 ) : (
                                   <span style={{ color: 'var(--muted)', fontSize: '11.5px' }}>
-                                    Br 0.00 (Cost not set)
+                                    {language === 'am' ? 'ወጪ አልተወሰነም' : 'Cost not set'}
                                   </span>
                                 )}
                               </td>
@@ -605,11 +600,11 @@ export const ReportsPage: React.FC = () => {
                           )}
                           <td style={{ textAlign: 'center' }}>
                             {isOutOfStock ? (
-                              <span className="badge badge-danger">Out of Stock</span>
+                              <span className="badge badge-danger">{t.products.outOfStock}</span>
                             ) : isLow ? (
-                              <span className="badge badge-danger">Low Stock</span>
+                              <span className="badge badge-danger">{t.products.lowStock}</span>
                             ) : (
-                              <span className="badge badge-success">In Stock</span>
+                              <span className="badge badge-success">{t.products.inStock}</span>
                             )}
                           </td>
                         </tr>
@@ -633,10 +628,12 @@ export const ReportsPage: React.FC = () => {
                 }}
               >
                 <div style={{ color: 'var(--muted)' }}>
-                  Showing <strong>{filteredBalances.length}</strong> of <strong>{balances.length}</strong> products
+                  {language === 'am'
+                    ? `ከ ${balances.length} ምርቶች ውስጥ ${filteredBalances.length} በማሳየት ላይ`
+                    : `Showing ${filteredBalances.length} of ${balances.length} products`}
                 </div>
                 <div style={{ fontWeight: 800, fontSize: '15px', color: 'var(--teal-dark)' }}>
-                  Filtered Total Stock Value:{' '}
+                  {language === 'am' ? 'የተጣራ ጠቅላላ የክምችት ዋጋ: ' : 'Filtered Total Stock Value: '}
                   {formatCurrency(
                     filteredBalances.reduce(
                       (acc, b) => acc + Number(b.totalValuation ?? (Number(b.quantityOnHand || 0) * Number(b.averageCost || 0))),

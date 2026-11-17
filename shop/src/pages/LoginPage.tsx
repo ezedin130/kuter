@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, KeyRound } from 'lucide-react';
+import { Lock, Mail, ArrowRight, KeyRound, Languages } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Alert } from '../components/Alert';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const LoginPage: React.FC = () => {
   const { login, isLoading, error } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
@@ -13,13 +15,13 @@ export const LoginPage: React.FC = () => {
     e.preventDefault();
     setLocalError(null);
     if (!email.trim() || !password) {
-      setLocalError('Please enter both email and password.');
+      setLocalError(t('login.emailRequired'));
       return;
     }
     try {
       await login(email.trim(), password);
-    } catch (err: any) {
-      setLocalError(err.message || 'Authentication failed. Please verify your credentials.');
+    } catch (err: unknown) {
+      setLocalError(err instanceof Error ? err.message : t('login.authFailed'));
     }
   };
 
@@ -38,8 +40,23 @@ export const LoginPage: React.FC = () => {
         justifyContent: 'center',
         backgroundColor: 'var(--canvas)',
         padding: '24px',
+        position: 'relative',
       }}
     >
+      {/* Top right language switch for shop login screen */}
+      <div style={{ position: 'absolute', top: '20px', right: '20px' }}>
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="topbar-lang-btn"
+          title={language === 'am' ? 'Switch interface to English' : 'የሱቅ በይነገጹን ወደ አማርኛ ቀይር'}
+        >
+          <Languages size={15} className="lang-icon" />
+          <span className="lang-label">{language === 'am' ? 'አማርኛ' : 'English'}</span>
+          <span className="lang-code-pill">{language === 'am' ? 'AM' : 'EN'}</span>
+        </button>
+      </div>
+
       <div
         style={{
           width: '100%',
@@ -70,10 +87,10 @@ export const LoginPage: React.FC = () => {
             K
           </div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--ink)' }}>
-            Kuter Shop Portal
+            {t('login.title')}
           </h1>
           <p style={{ fontSize: '14px', color: 'var(--muted)', marginTop: '4px' }}>
-            Inventory Management for Building Materials
+            {t('login.subtitle')}
           </p>
         </div>
 
@@ -87,7 +104,7 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="form-group">
-            <label className="form-label">Work Email</label>
+            <label className="form-label">{t('login.workEmail')}</label>
             <div style={{ position: 'relative' }}>
               <Mail
                 size={16}
@@ -108,7 +125,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label">{t('login.password')}</label>
             <div style={{ position: 'relative' }}>
               <Lock
                 size={16}
@@ -131,16 +148,16 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: '100%', height: '44px', marginTop: '8px' }}
+            style={{ width: '100%', minHeight: '44px', marginTop: '8px', fontSize: '15px' }}
             disabled={isLoading}
           >
             {isLoading ? (
-              <span>Authenticating...</span>
+              <span>{t('login.authenticating')}</span>
             ) : (
-              <>
-                <span>Sign in to Shop</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{t('login.signIn')}</span>
                 <ArrowRight size={16} />
-              </>
+              </span>
             )}
           </button>
         </form>
@@ -150,37 +167,33 @@ export const LoginPage: React.FC = () => {
             marginTop: '28px',
             paddingTop: '20px',
             borderTop: '1px solid var(--border)',
+            fontSize: '12.5px',
+            color: 'var(--muted)',
           }}
         >
-          <div
-            style={{
-              fontSize: '11.5px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.6px',
-              color: 'var(--muted)',
-              marginBottom: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontWeight: 600, color: 'var(--ink)' }}>
             <KeyRound size={14} color="var(--teal)" />
-            <span>Quick Demo Credentials</span>
+            <span>{t('login.demoTitle')}</span>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <p style={{ margin: '0 0 10px 0', fontSize: '11.5px', lineHeight: 1.4 }}>
+            {t('login.demoHint')}
+          </p>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
-              onClick={() => handleDemoFill('owner@amoudi.com', 'Admin@123456')}
-              style={{ justifyContent: 'space-between', width: '100%' }}
+              style={{ fontSize: '12px', padding: '0 10px', height: '30px' }}
+              onClick={() => handleDemoFill('owner@materials-yard.com', 'Admin@123456')}
             >
-              <div style={{ textAlign: 'left' }}>
-                <span style={{ fontWeight: 700 }}>Al-Amoudi Owner</span>
-                <div style={{ fontSize: '11px', color: 'var(--muted)' }}>owner@amoudi.com</div>
-              </div>
-              <span className="badge badge-teal">Owner</span>
+              {t('login.ownerBtn')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              style={{ fontSize: '12px', padding: '0 10px', height: '30px' }}
+              onClick={() => handleDemoFill('cashier@materials-yard.com', 'Admin@123456')}
+            >
+              {t('login.cashierBtn')}
             </button>
           </div>
         </div>

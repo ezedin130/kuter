@@ -19,6 +19,7 @@ import {
   CreateStockReceivingItemDto,
   StockReceivingResponse,
 } from '../api/types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ReceivingLineState {
   productId: string;
@@ -35,6 +36,7 @@ interface ReceivingLineState {
 }
 
 export const ReceiveStockPage: React.FC = () => {
+  const { t, formatCurrency, formatDate, language } = useLanguage();
   const [activeView, setActiveView] = useState<'form' | 'history'>('form');
 
   // Catalog products
@@ -126,11 +128,11 @@ export const ReceiveStockPage: React.FC = () => {
     if (!prod) return;
 
     if (lineQuantity <= 0) {
-      setError('Received quantity must be greater than zero.');
+      setError(language === 'am' ? 'የተረከቡት መጠን ከዜሮ በላይ መሆን አለበት።' : 'Received quantity must be greater than zero.');
       return;
     }
     if (lineCost < 0) {
-      setError('Unit purchase cost cannot be negative.');
+      setError(language === 'am' ? 'የአንድ መለኪያ የግዢ ወጪ ከአሉታዊ መሆን አይችልም።' : 'Unit purchase cost cannot be negative.');
       return;
     }
 
@@ -213,11 +215,11 @@ export const ReceiveStockPage: React.FC = () => {
   const handleSubmitReceiving = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supplierName.trim()) {
-      setError('Supplier name is required.');
+      setError(language === 'am' ? 'የአቅራቢ ስም አስፈላጊ ነው።' : 'Supplier name is required.');
       return;
     }
     if (items.length === 0) {
-      setError('Please add at least one line item to receive.');
+      setError(language === 'am' ? 'እባክዎ ቢያንስ አንድ የደረሰኝ ዕቃ መስመር ይጨምሩ።' : 'Please add at least one line item to receive.');
       return;
     }
 
@@ -244,7 +246,11 @@ export const ReceiveStockPage: React.FC = () => {
 
     try {
       const res = await shopApi.receiveStock(payload);
-      setSuccessMsg(`Stock receiving ${res.data.receivingNumber} recorded successfully! Inventory balances updated.`);
+      setSuccessMsg(
+        language === 'am'
+          ? `የክምችት ገቢ ቁጥር ${res.data.receivingNumber} በተሳካ ሁኔታ ተመዝግቧል! የክምችት ሚዛን ዘምኗል።`
+          : `Stock receiving ${res.data.receivingNumber} recorded successfully! Inventory balances updated.`
+      );
       setSupplierName('');
       setDeliveryNoteRef('');
       setNotes('');
@@ -253,17 +259,10 @@ export const ReceiveStockPage: React.FC = () => {
       const updated = await shopApi.listProducts({ size: 200 });
       setProducts(updated.data?.content || []);
     } catch (err: any) {
-      setError(err.message || 'Failed to record stock receiving.');
+      setError(err.message || (language === 'am' ? 'የክምችት ገቢ መመዝገብ አልተቻለም።' : 'Failed to record stock receiving.'));
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const formatCurrency = (val: number) => {
-    return `Br ${Number(val || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
   };
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
@@ -276,18 +275,18 @@ export const ReceiveStockPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Inventory Inbound"
-        title="Stock Receiving"
-        subtitle="Log inbound deliveries, update moving average purchase costs, and receive stock in configured units"
+        eyebrow={language === 'am' ? 'የገቢ ክምችት' : 'Inventory Inbound'}
+        title={t.receive.title}
+        subtitle={t.receive.subtitle}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               type="button"
-              className="btn btn-primary"
+              className={`btn ${activeView === 'form' ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => setActiveView('form')}
             >
               <Plus size={16} />
-              <span>New Stock Receiving</span>
+              <span>{language === 'am' ? 'አዲስ ገቢ መዝግብ' : 'New Stock Receiving'}</span>
             </button>
             <button
               type="button"
@@ -295,7 +294,7 @@ export const ReceiveStockPage: React.FC = () => {
               onClick={() => setActiveView('history')}
             >
               <FileText size={16} />
-              <span>Receiving History</span>
+              <span>{language === 'am' ? 'የገቢ ታሪክ' : 'Receiving History'}</span>
             </button>
           </div>
         }
@@ -309,15 +308,15 @@ export const ReceiveStockPage: React.FC = () => {
           {/* Header Card */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
-              Supplier & Inbound Delivery Details
+              {language === 'am' ? 'የአቅራቢ እና የማስረከቢያ ዝርዝር' : 'Supplier & Inbound Delivery Details'}
             </h2>
             <div className="form-row-3">
               <div className="form-group">
-                <label className="form-label">Supplier / Vendor Name *</label>
+                <label className="form-label">{t.receive.supplierName} *</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. National Cement, Mugher Cement, Ethio Steel"
+                  placeholder={language === 'am' ? 'ምሳሌ፡ ናሽናል ሲሚንቶ፣ ሙገር፣ ኢትዮ ስቲል' : 'e.g. National Cement, Mugher Cement, Ethio Steel'}
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
                   required
@@ -325,7 +324,7 @@ export const ReceiveStockPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Delivery Note / Invoice Ref</label>
+                <label className="form-label">{t.receive.invoiceNumber}</label>
                 <input
                   type="text"
                   className="form-input"
@@ -336,11 +335,11 @@ export const ReceiveStockPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Receiving Notes</label>
+                <label className="form-label">{t.common.notes} ({t.common.optional})</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="Truck plate, driver name, condition, warehouse bay..."
+                  placeholder={language === 'am' ? 'የመኪና ታርጋ፣ የአሽከርካሪ ስም፣ ሁኔታ...' : 'Truck plate, driver name, condition, warehouse bay...'}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -353,22 +352,22 @@ export const ReceiveStockPage: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <PackagePlus size={20} color="var(--teal)" />
               <h2 className="card-title" style={{ margin: 0 }}>
-                Add Products to This Inbound Receiving
+                {language === 'am' ? 'ወደዚህ የገቢ ሰነድ ምርቶችን ይጨምሩ' : 'Add Products to This Inbound Receiving'}
               </h2>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', alignItems: 'flex-end' }}>
               <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Select Product *</label>
+                <label className="form-label">{t.receive.selectProduct} *</label>
                 <select
                   className="form-select"
                   value={selectedProductId}
                   onChange={(e) => handleProductSelect(e.target.value)}
                 >
-                  <option value="">-- Choose Product to Receive --</option>
+                  <option value="">{language === 'am' ? '-- የሚረከቡትን እቃ ይምረጡ --' : '-- Choose Product to Receive --'}</option>
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.sku}) — Current Stock: {p.currentStock} {p.baseUnitCode}
+                      {p.name} ({p.sku}) — {language === 'am' ? 'አሁን ያለ:' : 'Current Stock:'} {p.currentStock} {p.baseUnitCode}
                     </option>
                   ))}
                 </select>
@@ -376,7 +375,7 @@ export const ReceiveStockPage: React.FC = () => {
 
               <div className="form-group">
                 <label className="form-label">
-                  Receiving Unit {isLoadingConversions ? '(Loading...)' : ''}
+                  {language === 'am' ? 'የመቀበያ መለኪያ' : 'Receiving Unit'} {isLoadingConversions ? (language === 'am' ? '(በመጫን ላይ...)' : '(Loading...)') : ''}
                 </label>
                 <select
                   className="form-select"
@@ -386,7 +385,7 @@ export const ReceiveStockPage: React.FC = () => {
                 >
                   {selectedProduct && (
                     <option value={selectedProduct.baseUnitId}>
-                      {selectedProduct.baseUnitCode} (Base Unit)
+                      {selectedProduct.baseUnitCode} ({language === 'am' ? 'መነሻ መለኪያ' : 'Base Unit'})
                     </option>
                   )}
                   {selectedProductConversions.map((conv) => (
@@ -398,7 +397,7 @@ export const ReceiveStockPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Quantity Received</label>
+                <label className="form-label">{t.receive.quantityReceived}</label>
                 <input
                   type="number"
                   step="0.0001"
@@ -411,7 +410,7 @@ export const ReceiveStockPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Purchase Cost per Unit (Br)</label>
+                <label className="form-label">{t.receive.unitCost} ({t.common.currencySymbol})</label>
                 <input
                   type="number"
                   step="0.01"
@@ -432,7 +431,7 @@ export const ReceiveStockPage: React.FC = () => {
                   disabled={!selectedProductId || lineQuantity <= 0}
                 >
                   <Plus size={16} />
-                  <span>Add Product Line</span>
+                  <span>{t.receive.addLineItem}</span>
                 </button>
               </div>
             </div>
@@ -451,11 +450,11 @@ export const ReceiveStockPage: React.FC = () => {
                 }}
               >
                 <div>
-                  <span style={{ color: 'var(--muted)' }}>Product: </span>
+                  <span style={{ color: 'var(--muted)' }}>{language === 'am' ? 'ምርት:' : 'Product:'} </span>
                   <strong>{selectedProduct.name}</strong>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--muted)' }}>Equivalent Base Stock: </span>
+                  <span style={{ color: 'var(--muted)' }}>{language === 'am' ? 'ተመጣጣኝ መነሻ ክምችት:' : 'Equivalent Base Stock:'} </span>
                   <span className="badge badge-info" style={{ fontWeight: 700 }}>
                     {activeBaseEquivalent} {selectedProduct.baseUnitCode}
                   </span>
@@ -466,7 +465,7 @@ export const ReceiveStockPage: React.FC = () => {
                   )}
                 </div>
                 <div>
-                  <span style={{ color: 'var(--muted)' }}>Line Total: </span>
+                  <span style={{ color: 'var(--muted)' }}>{language === 'am' ? 'የመስመር ድምር:' : 'Line Total:'} </span>
                   <strong style={{ color: 'var(--teal-dark)' }}>{formatCurrency(activeLineSubtotal)}</strong>
                 </div>
               </div>
@@ -476,20 +475,20 @@ export const ReceiveStockPage: React.FC = () => {
           {/* Line Items Card */}
           <div className="card">
             <div className="card-header">
-              <h2 className="card-title">Received Line Items ({items.length})</h2>
+              <h2 className="card-title">{t.receive.items} ({items.length})</h2>
             </div>
 
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th>Receiving Unit</th>
-                    <th style={{ width: '130px' }}>Quantity</th>
-                    <th>Base Equivalent</th>
-                    <th style={{ width: '160px' }}>Purchase Cost (Br)</th>
-                    <th style={{ textAlign: 'right' }}>Total Cost (Br)</th>
-                    <th style={{ textAlign: 'right' }}>Action</th>
+                    <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                    <th>{language === 'am' ? 'የመቀበያ መለኪያ' : 'Receiving Unit'}</th>
+                    <th style={{ width: '130px' }}>{t.common.quantity}</th>
+                    <th>{language === 'am' ? 'ተመጣጣኝ መነሻ' : 'Base Equivalent'}</th>
+                    <th style={{ width: '160px' }}>{t.receive.unitCost}</th>
+                    <th style={{ textAlign: 'right' }}>{t.receive.totalCost}</th>
+                    <th style={{ textAlign: 'right' }}>{t.common.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,9 +497,9 @@ export const ReceiveStockPage: React.FC = () => {
                       <td colSpan={7} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                           <PackagePlus size={32} color="var(--muted)" />
-                          <div style={{ fontWeight: 600 }}>No products added to this receiving yet.</div>
+                          <div style={{ fontWeight: 600 }}>{language === 'am' ? 'እስካሁን ምንም ዕቃዎች አልተጨመሩም።' : 'No products added to this receiving yet.'}</div>
                           <div style={{ fontSize: '12.5px' }}>
-                            Select a product above and click <strong>Add Product Line</strong>.
+                            {language === 'am' ? 'ከላይ እቃ ይምረጡ እና "የዕቃ መስመር ጨምር" የሚለውን ይጫኑ።' : 'Select a product above and click Add Product Line.'}
                           </div>
                         </div>
                       </td>
@@ -524,7 +523,7 @@ export const ReceiveStockPage: React.FC = () => {
                               onChange={(e) => handleUnitChange(idx, e.target.value)}
                             >
                               <option value={item.baseUnitId}>
-                                {item.baseUnitCode} (Base)
+                                {item.baseUnitCode} ({language === 'am' ? 'መነሻ' : 'Base'})
                               </option>
                               {item.conversions.map((conv) => (
                                 <option key={conv.id} value={conv.unitDefinitionId}>
@@ -572,7 +571,7 @@ export const ReceiveStockPage: React.FC = () => {
                               type="button"
                               className="btn-icon"
                               onClick={() => handleRemoveLine(idx)}
-                              title="Remove item"
+                              title={t.common.delete}
                             >
                               <Trash2 size={16} color="var(--danger)" />
                             </button>
@@ -599,11 +598,11 @@ export const ReceiveStockPage: React.FC = () => {
                 }}
               >
                 <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
-                  Total Product Lines: <strong>{items.length}</strong>
+                  {language === 'am' ? 'ጠቅላላ የዕቃ መስመሮች:' : 'Total Product Lines:'} <strong>{items.length}</strong>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                   <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--ink)' }}>
-                    Total Inbound Cost: {formatCurrency(totalCost)}
+                    {language === 'am' ? 'ጠቅላላ የገቢ ወጪ:' : 'Total Inbound Cost:'} {formatCurrency(totalCost)}
                   </div>
                   <button
                     type="submit"
@@ -612,7 +611,7 @@ export const ReceiveStockPage: React.FC = () => {
                     disabled={isSubmitting || items.length === 0}
                   >
                     <CheckCircle2 size={18} />
-                    <span>{isSubmitting ? 'Recording Inbound...' : 'Save Stock Receiving & Update Stock'}</span>
+                    <span>{isSubmitting ? (language === 'am' ? 'በመመዝገብ ላይ...' : 'Recording Inbound...') : t.receive.submitReceiving}</span>
                   </button>
                 </div>
               </div>
@@ -623,7 +622,7 @@ export const ReceiveStockPage: React.FC = () => {
         /* History View */
         <div className="card">
           <div className="card-header">
-            <h2 className="card-title">Stock Receiving History</h2>
+            <h2 className="card-title">{language === 'am' ? 'የገቢ ክምችት ታሪክ' : 'Stock Receiving History'}</h2>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
@@ -631,7 +630,7 @@ export const ReceiveStockPage: React.FC = () => {
               disabled={isLoadingHistory}
             >
               <RefreshCw size={14} className={isLoadingHistory ? 'spin' : ''} />
-              <span>Refresh</span>
+              <span>{t.common.refresh}</span>
             </button>
           </div>
 
@@ -639,35 +638,35 @@ export const ReceiveStockPage: React.FC = () => {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Receiving #</th>
-                  <th>Supplier</th>
-                  <th>Delivery Note Ref</th>
-                  <th>Received Date</th>
-                  <th>Received By</th>
-                  <th>Lines</th>
-                  <th style={{ textAlign: 'right' }}>Total Value</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
+                  <th>{language === 'am' ? 'የገቢ ቁጥር' : 'Receiving #'}</th>
+                  <th>{t.receive.supplierName}</th>
+                  <th>{t.receive.invoiceNumber}</th>
+                  <th>{t.receive.receivedDate}</th>
+                  <th>{language === 'am' ? 'ተቀባይ' : 'Received By'}</th>
+                  <th>{language === 'am' ? 'መስመሮች' : 'Lines'}</th>
+                  <th style={{ textAlign: 'right' }}>{t.receive.totalCost}</th>
+                  <th style={{ textAlign: 'right' }}>{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoadingHistory ? (
                   <tr>
                     <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                      Loading stock receiving history...
+                      {t.common.loading}
                     </td>
                   </tr>
                 ) : receipts.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                        <div>No stock receiving records found yet.</div>
+                        <div>{language === 'am' ? 'እስካሁን ምንም የገቢ መዝገብ አልተገኘም።' : 'No stock receiving records found yet.'}</div>
                         <button
                           type="button"
                           className="btn btn-primary btn-sm"
                           onClick={() => setActiveView('form')}
                         >
                           <Plus size={14} />
-                          <span>Start New Stock Receiving</span>
+                          <span>{language === 'am' ? 'አዲስ ገቢ መዝግብ' : 'Start New Stock Receiving'}</span>
                         </button>
                       </div>
                     </td>
@@ -684,9 +683,9 @@ export const ReceiveStockPage: React.FC = () => {
                         <td style={{ fontWeight: 700 }}>{rcv.receivingNumber}</td>
                         <td style={{ fontWeight: 600 }}>{rcv.supplierName}</td>
                         <td>{rcv.deliveryNoteRef || '—'}</td>
-                        <td>{new Date(rcv.receivedAt).toLocaleDateString()}</td>
+                        <td>{formatDate(rcv.receivedAt)}</td>
                         <td>{rcv.receivedByName}</td>
-                        <td>{rcv.items?.length || 0} item(s)</td>
+                        <td>{rcv.items?.length || 0} {language === 'am' ? 'ዕቃዎች' : 'item(s)'}</td>
                         <td style={{ textAlign: 'right', fontWeight: 700 }}>
                           {formatCurrency(totalVal)}
                         </td>
@@ -694,7 +693,7 @@ export const ReceiveStockPage: React.FC = () => {
                           <button
                             type="button"
                             className="btn-icon"
-                            title="View Details"
+                            title={t.common.details}
                             onClick={() => {
                               setSelectedReceipt(rcv);
                               setIsDetailOpen(true);
@@ -717,11 +716,11 @@ export const ReceiveStockPage: React.FC = () => {
       <Modal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        title={`Stock Receiving Details — ${selectedReceipt?.receivingNumber || ''}`}
+        title={`${language === 'am' ? 'የገቢ ክምችት ዝርዝር' : 'Stock Receiving Details'} — ${selectedReceipt?.receivingNumber || ''}`}
         size="large"
         footer={
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsDetailOpen(false)}>
-            Close
+            {t.common.close}
           </button>
         }
       >
@@ -729,26 +728,26 @@ export const ReceiveStockPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Supplier</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>{t.receive.supplierName}</span>
                 <div style={{ fontWeight: 700 }}>{selectedReceipt.supplierName}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Delivery Note Ref</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>{t.receive.invoiceNumber}</span>
                 <div>{selectedReceipt.deliveryNoteRef || '—'}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Received By</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>{language === 'am' ? 'ተቀባይ' : 'Received By'}</span>
                 <div>{selectedReceipt.receivedByName}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Received Date</span>
-                <div>{new Date(selectedReceipt.receivedAt).toLocaleString()}</div>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>{t.receive.receivedDate}</span>
+                <div>{formatDate(selectedReceipt.receivedAt)}</div>
               </div>
             </div>
 
             {selectedReceipt.notes && (
               <div style={{ padding: '8px 12px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: '6px', fontSize: '13px' }}>
-                <span style={{ fontWeight: 600 }}>Notes: </span>
+                <span style={{ fontWeight: 600 }}>{t.common.notes}: </span>
                 {selectedReceipt.notes}
               </div>
             )}
@@ -757,11 +756,11 @@ export const ReceiveStockPage: React.FC = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th>Received Qty</th>
-                    <th>Base Equivalent</th>
-                    <th style={{ textAlign: 'right' }}>Unit Cost</th>
-                    <th style={{ textAlign: 'right' }}>Total Cost</th>
+                    <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                    <th>{t.receive.quantityReceived}</th>
+                    <th>{language === 'am' ? 'ተመጣጣኝ መነሻ' : 'Base Equivalent'}</th>
+                    <th style={{ textAlign: 'right' }}>{t.receive.unitCost}</th>
+                    <th style={{ textAlign: 'right' }}>{t.receive.totalCost}</th>
                   </tr>
                 </thead>
                 <tbody>

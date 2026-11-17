@@ -21,10 +21,12 @@ import {
   UpdateProductDto,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import { ProductDetailPage } from './ProductDetailPage';
 
 export const ProductsPage: React.FC = () => {
   const { canManageCatalog, canManagePrices, role } = useAuth();
+  const { t, formatCurrency, language } = useLanguage();
   const isCashier = role === 'CASHIER';
 
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -147,7 +149,7 @@ export const ProductsPage: React.FC = () => {
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !sku.trim() || !baseUnitId) {
-      setFormError('SKU, Product Name, and Base Unit are required.');
+      setFormError(language === 'am' ? 'የእቃ ኮድ (SKU)፣ የምርት ስም እና መነሻ መለኪያ አስፈላጊ ናቸው።' : 'SKU, Product Name, and Base Unit are required.');
       return;
     }
 
@@ -191,14 +193,17 @@ export const ProductsPage: React.FC = () => {
   };
 
   const handleDeleteProduct = async (id: string, prodName: string) => {
-    if (!window.confirm(`Are you sure you want to deactivate or remove product "${prodName}"?`)) {
+    const confirmMsg = language === 'am'
+      ? `ምርት "${prodName}" እንዲቦዝን ወይም እንዲሰረዝ እርግጠኛ ነዎት?`
+      : `Are you sure you want to deactivate or remove product "${prodName}"?`;
+    if (!window.confirm(confirmMsg)) {
       return;
     }
     try {
       await shopApi.deleteProduct(id);
       await fetchCatalog(page);
     } catch (err: any) {
-      alert('Failed to delete product: ' + (err.message || err));
+      alert((language === 'am' ? 'ምርቱን መሰረዝ አልተቻለም: ' : 'Failed to delete product: ') + (err.message || err));
     }
   };
 
@@ -216,18 +221,10 @@ export const ProductsPage: React.FC = () => {
       setPriceModalProduct(null);
       await fetchCatalog(page);
     } catch (err: any) {
-      alert('Failed to update selling price: ' + (err.message || err));
+      alert((language === 'am' ? 'የመሸጫ ዋጋ ማዘመን አልተቻለም: ' : 'Failed to update selling price: ') + (err.message || err));
     } finally {
       setIsUpdatingPrice(false);
     }
-  };
-
-  const formatCurrency = (val?: number) => {
-    if (val == null) return '—';
-    return Number(val).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
   };
 
   // If a product is selected for detail view, render ProductDetailPage
@@ -246,9 +243,9 @@ export const ProductsPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Catalog Management"
-        title="Products & Inventory Catalog"
-        subtitle="Manage building material specifications, base UOM, dual-unit conversions, and selling prices"
+        eyebrow={language === 'am' ? 'የካታሎግ አስተዳደር' : 'Catalog Management'}
+        title={t.products.title}
+        subtitle={t.products.subtitle}
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -258,12 +255,12 @@ export const ProductsPage: React.FC = () => {
               disabled={isLoading}
             >
               <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-              <span>Refresh</span>
+              <span>{t.common.refresh}</span>
             </button>
             {canManageCatalog && (
               <button type="button" className="btn btn-primary btn-sm" onClick={handleOpenAddModal}>
                 <Plus size={14} />
-                <span>Add Product</span>
+                <span>{t.products.addProduct}</span>
               </button>
             )}
           </div>
@@ -278,7 +275,7 @@ export const ProductsPage: React.FC = () => {
             <input
               type="text"
               className="input-search"
-              placeholder="Search by SKU, product name, or barcode..."
+              placeholder={t.products.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -289,7 +286,7 @@ export const ProductsPage: React.FC = () => {
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
-            <option value="">All Categories</option>
+            <option value="">{t.pos.allCategories}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -313,11 +310,11 @@ export const ProductsPage: React.FC = () => {
               checked={lowStockOnly}
               onChange={(e) => setLowStockOnly(e.target.checked)}
             />
-            <span>Low Stock Only</span>
+            <span>{language === 'am' ? 'ዝቅተኛ ክምችት ብቻ' : 'Low Stock Only'}</span>
           </label>
 
           <button type="submit" className="btn btn-secondary btn-sm">
-            Filter
+            {t.common.filter}
           </button>
         </form>
 
@@ -326,28 +323,30 @@ export const ProductsPage: React.FC = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>SKU</th>
-                <th>Product Name</th>
-                <th>Category</th>
-                <th>Base Unit</th>
-                <th style={{ textAlign: 'center' }}>Stock On Hand</th>
-                <th style={{ textAlign: 'right' }}>Selling Price</th>
-                {!isCashier && <th style={{ textAlign: 'right' }}>Avg Cost</th>}
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>{t.products.sku}</th>
+                <th>{t.products.name}</th>
+                <th>{t.products.category}</th>
+                <th>{t.products.baseUnit}</th>
+                <th style={{ textAlign: 'center' }}>{t.products.stock}</th>
+                <th style={{ textAlign: 'right' }}>{t.products.sellingPrice}</th>
+                {!isCashier && <th style={{ textAlign: 'right' }}>{language === 'am' ? 'አማካይ ወጪ' : 'Avg Cost'}</th>}
+                <th>{t.common.status}</th>
+                <th style={{ textAlign: 'right' }}>{t.products.actions}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={isCashier ? 8 : 9} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    Loading product catalog...
+                    {t.common.loading}
                   </td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
                   <td colSpan={isCashier ? 8 : 9} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    No products found. Use "Add Product" to create your first catalog item.
+                    {language === 'am'
+                      ? 'ምንም ምርቶች አልተገኙም። የመጀመሪያውን እቃ ለመመዝገብ "ምርት ጨምር" የሚለውን ይጠቀሙ።'
+                      : 'No products found. Use "Add Product" to create your first catalog item.'}
                   </td>
                 </tr>
               ) : (
@@ -358,13 +357,13 @@ export const ProductsPage: React.FC = () => {
                       <div
                         style={{ fontWeight: 700, color: 'var(--ink)', cursor: 'pointer' }}
                         onClick={() => setSelectedProductId(p.id)}
-                        title="Click to view details and unit conversions"
+                        title={language === 'am' ? 'ዝርዝር እና የመለኪያ ልወጣዎችን ለማየት ይጫኑ' : 'Click to view details and unit conversions'}
                       >
                         {p.name}
                       </div>
-                      {p.brand && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Brand: {p.brand}</div>}
+                      {p.brand && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{language === 'am' ? 'ብራንድ' : 'Brand'}: {p.brand}</div>}
                     </td>
-                    <td>{p.categoryName || 'Unassigned'}</td>
+                    <td>{p.categoryName || (language === 'am' ? 'ያልተመደበ' : 'Unassigned')}</td>
                     <td>
                       <span className="badge badge-neutral">{p.baseUnitCode}</span>
                     </td>
@@ -375,7 +374,7 @@ export const ProductsPage: React.FC = () => {
                         const isOutOfStock = stockQty <= 0;
                         const isLowStock = isOutOfStock || stockQty <= threshold;
                         const badgeClass = isOutOfStock || isLowStock ? 'badge-danger' : 'badge-success';
-                        const badgeLabel = isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock';
+                        const badgeLabel = isOutOfStock ? t.products.outOfStock : isLowStock ? t.products.lowStock : t.products.inStock;
                         const statusColor = isOutOfStock || isLowStock ? '#dc2626' : '#16a34a';
 
                         return (
@@ -406,7 +405,7 @@ export const ProductsPage: React.FC = () => {
                         <button
                           type="button"
                           className="btn-icon"
-                          title="View Details & Conversions"
+                          title={language === 'am' ? 'ዝርዝር እና ልወጣዎችን ተመልከት' : 'View Details & Conversions'}
                           onClick={() => setSelectedProductId(p.id)}
                         >
                           <Eye size={16} color="var(--teal)" />
@@ -417,7 +416,7 @@ export const ProductsPage: React.FC = () => {
                               <button
                                 type="button"
                                 className="btn-icon"
-                                title="Update Selling Price (Owner Only)"
+                                title={language === 'am' ? 'የመሸጫ ዋጋ አዘምን (የባለቤት ብቻ)' : 'Update Selling Price (Owner Only)'}
                                 onClick={() => handleOpenPriceModal(p)}
                               >
                                 <Tag size={16} color="var(--primary)" />
@@ -426,7 +425,7 @@ export const ProductsPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn-icon"
-                              title="Edit Product"
+                              title={t.products.editProduct}
                               onClick={() => handleOpenEditModal(p)}
                             >
                               <Edit size={16} />
@@ -434,7 +433,7 @@ export const ProductsPage: React.FC = () => {
                             <button
                               type="button"
                               className="btn-icon"
-                              title="Delete Product"
+                              title={t.products.deleteProduct}
                               onClick={() => handleDeleteProduct(p.id, p.name)}
                             >
                               <Trash2 size={16} color="var(--danger)" />
@@ -463,7 +462,9 @@ export const ProductsPage: React.FC = () => {
             }}
           >
             <span>
-              Showing {products.length} of {totalElements} products (Page {page + 1} of {totalPages})
+              {language === 'am'
+                ? `ከ ${totalElements} ምርቶች ውስጥ ${products.length} በማሳየት ላይ (ገጽ ${page + 1} ከ ${totalPages})`
+                : `Showing ${products.length} of ${totalElements} products (Page ${page + 1} of ${totalPages})`}
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -472,7 +473,7 @@ export const ProductsPage: React.FC = () => {
                 disabled={page === 0}
                 onClick={() => fetchCatalog(page - 1)}
               >
-                Previous
+                {t.common.previous}
               </button>
               <button
                 type="button"
@@ -480,7 +481,7 @@ export const ProductsPage: React.FC = () => {
                 disabled={page >= totalPages - 1}
                 onClick={() => fetchCatalog(page + 1)}
               >
-                Next
+                {t.common.next}
               </button>
             </div>
           </div>
@@ -491,7 +492,7 @@ export const ProductsPage: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={isEditing ? 'Edit Product' : 'Add New Product'}
+        title={isEditing ? t.products.editProduct : t.products.createProduct}
         size="large"
         footer={
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -500,7 +501,7 @@ export const ProductsPage: React.FC = () => {
               className="btn btn-secondary btn-sm"
               onClick={() => setIsModalOpen(false)}
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               type="button"
@@ -508,7 +509,7 @@ export const ProductsPage: React.FC = () => {
               onClick={handleSaveProduct}
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Product'}
+              {isSaving ? (language === 'am' ? 'በማስቀመጥ ላይ...' : 'Saving...') : isEditing ? t.common.save : t.products.createProduct}
             </button>
           </div>
         }
@@ -519,7 +520,7 @@ export const ProductsPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">SKU / Code *</label>
+                <label className="form-label">{t.products.sku} *</label>
                 <input
                   type="text"
                   className="form-input"
@@ -529,15 +530,15 @@ export const ProductsPage: React.FC = () => {
                   disabled={isEditing}
                   required
                 />
-                <span className="form-hint">Unique product code identifier</span>
+                <span className="form-hint">{language === 'am' ? 'ልዩ የእቃ መለያ ኮድ' : 'Unique product code identifier'}</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Product Name *</label>
+                <label className="form-label">{t.products.name} *</label>
                 <input
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Portland Cement Type I/II (50kg Bag)"
+                  placeholder={language === 'am' ? 'ምሳሌ፡ ፖርትላንድ ሲሚንቶ (50 ኪ.ግ ጆንያ)' : 'e.g. Portland Cement Type I/II (50kg Bag)'}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -547,13 +548,13 @@ export const ProductsPage: React.FC = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Category</label>
+                <label className="form-label">{t.products.category}</label>
                 <select
                   className="form-select"
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
                 >
-                  <option value="">-- Unassigned --</option>
+                  <option value="">{language === 'am' ? '-- ያልተመደበ --' : '-- Unassigned --'}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -563,7 +564,7 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Base Stock Unit *</label>
+                <label className="form-label">{t.products.baseUnit} *</label>
                 <select
                   className="form-select"
                   value={baseUnitId}
@@ -571,21 +572,21 @@ export const ProductsPage: React.FC = () => {
                   disabled={isEditing}
                   required
                 >
-                  <option value="">-- Select Base Unit --</option>
+                  <option value="">{language === 'am' ? '-- መነሻ መለኪያ ይምረጡ --' : '-- Select Base Unit --'}</option>
                   {units.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.name} ({u.code})
                     </option>
                   ))}
                 </select>
-                <span className="form-hint">Base UOM cannot be changed once stock movements exist</span>
+                <span className="form-hint">{language === 'am' ? 'የክምችት እንቅስቃሴ ከተመዘገበ በኋላ መነሻ መለኪያ መቀየር አይቻልም' : 'Base UOM cannot be changed once stock movements exist'}</span>
               </div>
             </div>
 
             <div className="form-row-3">
               <div className="form-group">
                 <label className="form-label">
-                  Default Selling Price * {isEditing && !canManagePrices && <span style={{ fontSize: '11px', color: 'var(--amber)' }}>(Owner only)</span>}
+                  {t.products.sellingPrice} * {isEditing && !canManagePrices && <span style={{ fontSize: '11px', color: 'var(--amber)' }}>({language === 'am' ? 'የባለቤት ብቻ' : 'Owner only'})</span>}
                 </label>
                 <input
                   type="number"
@@ -603,13 +604,13 @@ export const ProductsPage: React.FC = () => {
                 />
                 {isEditing && !canManagePrices && (
                   <span className="form-hint" style={{ color: 'var(--muted)' }}>
-                    Only the shop owner is authorized to modify selling prices.
+                    {language === 'am' ? 'የመሸጫ ዋጋ የመቀየር ስልጣን ያለው የሱቁ ባለቤት ብቻ ነው።' : 'Only the shop owner is authorized to modify selling prices.'}
                   </span>
                 )}
               </div>
 
               <div className="form-group">
-                <label className="form-label">Initial Cost Price</label>
+                <label className="form-label">{language === 'am' ? 'የመጀመሪያ የግዢ ዋጋ' : 'Initial Cost Price'}</label>
                 <input
                   type="number"
                   step="0.01"
@@ -621,7 +622,7 @@ export const ProductsPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Reorder Threshold</label>
+                <label className="form-label">{language === 'am' ? 'የማስጠንቀቂያ ጣሪያ' : 'Reorder Threshold'}</label>
                 <input
                   type="number"
                   step="1"
@@ -630,13 +631,13 @@ export const ProductsPage: React.FC = () => {
                   value={reorderThreshold}
                   onChange={(e) => setReorderThreshold(parseFloat(e.target.value) || 0)}
                 />
-                <span className="form-hint">Alerts when stock drops to or below</span>
+                <span className="form-hint">{language === 'am' ? 'ክምችቱ ከዚህ በታች ሲሆን ማስጠንቀቂያ ይሰጣል' : 'Alerts when stock drops to or below'}</span>
               </div>
             </div>
 
             {!isEditing && (
               <div className="form-group">
-                <label className="form-label">Initial Quantity on Hand (Optional)</label>
+                <label className="form-label">{language === 'am' ? 'በእጅ ላይ ያለ የመጀመሪያ ብዛት (አማራጭ)' : 'Initial Quantity on Hand (Optional)'}</label>
                 <input
                   type="number"
                   step="1"
@@ -645,15 +646,15 @@ export const ProductsPage: React.FC = () => {
                   value={initialQuantity}
                   onChange={(e) => setInitialQuantity(parseFloat(e.target.value) || 0)}
                 />
-                <span className="form-hint">Opening stock balance recorded as an initial receipt</span>
+                <span className="form-hint">{language === 'am' ? 'የመክፈቻ ክምችት ሚዛን እንደ መጀመሪያ ገቢ ይመዘገባል' : 'Opening stock balance recorded as an initial receipt'}</span>
               </div>
             )}
 
             <div className="form-group">
-              <label className="form-label">Description (Optional)</label>
+              <label className="form-label">{language === 'am' ? 'መግለጫ (አማራጭ)' : 'Description (Optional)'}</label>
               <textarea
                 className="form-textarea"
-                placeholder="Product specifications, grade, manufacturer notes..."
+                placeholder={language === 'am' ? 'የምርት ዝርዝሮች፣ ደረጃ፣ የአምራች ማስታወሻዎች...' : 'Product specifications, grade, manufacturer notes...'}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -666,7 +667,7 @@ export const ProductsPage: React.FC = () => {
       {priceModalProduct && (
         <Modal
           isOpen={true}
-          title={`Update Selling Price — ${priceModalProduct.name}`}
+          title={`${language === 'am' ? 'የመሸጫ ዋጋ ማዘመን' : 'Update Selling Price'} — ${priceModalProduct.name}`}
           onClose={() => setPriceModalProduct(null)}
           footer={
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
@@ -676,7 +677,7 @@ export const ProductsPage: React.FC = () => {
                 onClick={() => setPriceModalProduct(null)}
                 disabled={isUpdatingPrice}
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="button"
@@ -684,17 +685,17 @@ export const ProductsPage: React.FC = () => {
                 onClick={handleSavePrice}
                 disabled={isUpdatingPrice || newSellingPrice <= 0}
               >
-                {isUpdatingPrice ? 'Saving...' : 'Save Price'}
+                {isUpdatingPrice ? (language === 'am' ? 'በማስቀመጥ ላይ...' : 'Saving...') : t.common.save}
               </button>
             </div>
           }
         >
           <div>
             <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '12px' }}>
-              SKU: <strong>{priceModalProduct.sku}</strong> | Base Unit: <strong>{priceModalProduct.baseUnitCode}</strong>
+              SKU: <strong>{priceModalProduct.sku}</strong> | {t.products.baseUnit}: <strong>{priceModalProduct.baseUnitCode}</strong>
             </p>
             <div className="form-group">
-              <label className="form-label">Authoritative Selling Price *</label>
+              <label className="form-label">{language === 'am' ? 'ዋና የመሸጫ ዋጋ *' : 'Authoritative Selling Price *'}</label>
               <input
                 type="number"
                 step="0.01"
@@ -706,7 +707,9 @@ export const ProductsPage: React.FC = () => {
                 autoFocus
               />
               <span className="form-hint">
-                This owner-controlled price will be strictly enforced during POS checkouts across all staff terminals.
+                {language === 'am'
+                  ? 'ይህ በባለቤቱ የተወሰነ ዋጋ በሁሉም የሰራተኞች ፖስ ተርሚናሎች ላይ በጥብቅ ተፈጻሚ ይሆናል።'
+                  : 'This owner-controlled price will be strictly enforced during POS checkouts across all staff terminals.'}
               </span>
             </div>
           </div>
