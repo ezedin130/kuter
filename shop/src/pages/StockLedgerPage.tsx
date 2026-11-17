@@ -10,9 +10,11 @@ import {
   MovementType,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const StockLedgerPage: React.FC = () => {
   const { role } = useAuth();
+  const { t, formatCurrency, formatDate, language } = useLanguage();
   const isCashier = role === 'CASHIER';
 
   const [movements, setMovements] = useState<StockMovementResponse[]>([]);
@@ -54,25 +56,17 @@ export const StockLedgerPage: React.FC = () => {
     fetchMovements(0);
   };
 
-  const formatCurrency = (val?: number) => {
-    if (val == null) return null;
-    return `Br ${Number(val).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  };
-
   const getMovementLabel = (type: string) => {
     switch (type) {
       case 'RECEIPT':
       case 'PURCHASE_RECEIPT':
-        return 'Buying';
+        return language === 'am' ? 'ግዢ / ገቢ' : 'Buying';
       case 'SALE':
-        return 'Selling';
+        return language === 'am' ? 'ሽያጭ / ወጪ' : 'Selling';
       case 'ADJUSTMENT':
-        return 'Adjustment';
+        return language === 'am' ? 'ማስተካከያ' : 'Adjustment';
       case 'RETURN':
-        return 'Return';
+        return language === 'am' ? 'የተመለሰ' : 'Return';
       default:
         return type;
     }
@@ -81,9 +75,9 @@ export const StockLedgerPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="Immutable Audit Trail"
-        title="Stock History"
-        subtitle="Complete chronological transaction log of all buying receipts, selling deductions, and stock adjustments"
+        eyebrow={language === 'am' ? 'የማይለወጥ የኦዲት መዝገብ' : 'Immutable Audit Trail'}
+        title={t.ledger.title}
+        subtitle={t.ledger.subtitle}
         actions={
           <button
             type="button"
@@ -92,7 +86,7 @@ export const StockLedgerPage: React.FC = () => {
             disabled={isLoading}
           >
             <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-            <span>Refresh</span>
+            <span>{t.common.refresh}</span>
           </button>
         }
       />
@@ -105,7 +99,7 @@ export const StockLedgerPage: React.FC = () => {
             <input
               type="text"
               className="input-search"
-              placeholder="Search by notes, reference code..."
+              placeholder={language === 'am' ? 'በማስታወሻ፣ በማጣቀሻ ኮድ ይፈልጉ...' : 'Search by notes, reference code...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -116,15 +110,15 @@ export const StockLedgerPage: React.FC = () => {
             value={movementType}
             onChange={(e) => setMovementType(e.target.value)}
           >
-            <option value="">All Movements</option>
-            <option value="RECEIPT">Buying (Receipts)</option>
-            <option value="SALE">Selling (Sales)</option>
-            <option value="ADJUSTMENT">Adjustment</option>
-            <option value="RETURN">Sales Returns / Voids</option>
+            <option value="">{language === 'am' ? 'ሁሉም እንቅስቃሴዎች' : 'All Movements'}</option>
+            <option value="RECEIPT">{language === 'am' ? 'ግዢ (ገቢ)' : 'Buying (Receipts)'}</option>
+            <option value="SALE">{language === 'am' ? 'ሽያጭ (ወጪ)' : 'Selling (Sales)'}</option>
+            <option value="ADJUSTMENT">{language === 'am' ? 'ማስተካከያ' : 'Adjustment'}</option>
+            <option value="RETURN">{language === 'am' ? 'የሽያጭ መመለሻዎች / ስረዛዎች' : 'Sales Returns / Voids'}</option>
           </select>
 
           <button type="submit" className="btn btn-secondary btn-sm">
-            Filter
+            {t.common.filter}
           </button>
         </form>
 
@@ -132,27 +126,27 @@ export const StockLedgerPage: React.FC = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>Product</th>
-                <th>Movement</th>
-                <th>Change</th>
-                <th>Balance After</th>
-                {!isCashier && <th style={{ textAlign: 'right' }}>Cost at Time of Transaction</th>}
-                <th>Reference</th>
-                <th>Actor</th>
+                <th>{t.ledger.timestamp}</th>
+                <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                <th>{t.ledger.movementType}</th>
+                <th>{t.ledger.changeQuantity}</th>
+                <th>{t.ledger.afterQuantity}</th>
+                {!isCashier && <th style={{ textAlign: 'right' }}>{language === 'am' ? 'በግብይቱ ወቅት የነበረ ወጪ' : 'Cost at Time of Transaction'}</th>}
+                <th>{t.ledger.referenceNumber}</th>
+                <th>{language === 'am' ? 'አከናወኝ' : 'Actor'}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={isCashier ? 7 : 8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    Loading stock history ledger...
+                    {t.common.loading}
                   </td>
                 </tr>
               ) : movements.length === 0 ? (
                 <tr>
                   <td colSpan={isCashier ? 7 : 8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    No stock movements recorded yet.
+                    {language === 'am' ? 'ምንም የክምችት እንቅስቃሴ አልተመዘገበም።' : 'No stock movements recorded yet.'}
                   </td>
                 </tr>
               ) : (
@@ -162,7 +156,7 @@ export const StockLedgerPage: React.FC = () => {
                   return (
                     <tr key={m.id}>
                       <td style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                        {new Date(m.createdAt).toLocaleString()}
+                        {formatDate(m.createdAt)}
                       </td>
                       <td>
                         <div style={{ fontWeight: 700 }}>{m.productName}</div>
@@ -196,11 +190,11 @@ export const StockLedgerPage: React.FC = () => {
                         <td style={{ textAlign: 'right', color: 'var(--muted)' }}>
                           {(() => {
                             const cost = m.unitCostSnapshot ?? m.unitCost ?? m.costAtTimeOfTransaction;
-                            const formatted = formatCurrency(cost);
+                            const formatted = cost != null ? formatCurrency(cost) : null;
                             return formatted ? (
                               <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{formatted}</span>
                             ) : (
-                              <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '11.5px' }}>Not available</span>
+                              <span style={{ color: 'var(--muted)', fontStyle: 'italic', fontSize: '11.5px' }}>{language === 'am' ? 'አይገኝም' : 'Not available'}</span>
                             );
                           })()}
                         </td>
@@ -216,7 +210,7 @@ export const StockLedgerPage: React.FC = () => {
                         )}
                       </td>
                       <td style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                        {m.actorEmail || 'System'}
+                        {m.actorEmail || (language === 'am' ? 'ስርዓት' : 'System')}
                       </td>
                     </tr>
                   );
@@ -239,7 +233,9 @@ export const StockLedgerPage: React.FC = () => {
             }}
           >
             <span>
-              Showing {movements.length} of {totalElements} movements (Page {page + 1} of {totalPages})
+              {language === 'am'
+                ? `ከ ${totalElements} እንቅስቃሴዎች ውስጥ ${movements.length} በማሳየት ላይ (ገጽ ${page + 1} ከ ${totalPages})`
+                : `Showing ${movements.length} of ${totalElements} movements (Page ${page + 1} of ${totalPages})`}
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -248,7 +244,7 @@ export const StockLedgerPage: React.FC = () => {
                 disabled={page === 0}
                 onClick={() => fetchMovements(page - 1)}
               >
-                Previous
+                {t.common.previous}
               </button>
               <button
                 type="button"
@@ -256,7 +252,7 @@ export const StockLedgerPage: React.FC = () => {
                 disabled={page >= totalPages - 1}
                 onClick={() => fetchMovements(page + 1)}
               >
-                Next
+                {t.common.next}
               </button>
             </div>
           </div>

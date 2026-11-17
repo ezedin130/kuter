@@ -17,9 +17,11 @@ import {
   SaleReceiptResponseDto,
 } from '../api/types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const SalesHistoryPage: React.FC = () => {
   const { canVoidSales } = useAuth();
+  const { t, formatCurrency, formatDate, language } = useLanguage();
 
   const [sales, setSales] = useState<SaleResponseDto[]>([]);
   const [pageInfo, setPageInfo] = useState({ page: 0, size: 20, totalElements: 0, totalPages: 0 });
@@ -95,7 +97,7 @@ export const SalesHistoryPage: React.FC = () => {
   const handleConfirmVoid = async () => {
     if (!selectedSale) return;
     if (!voidReason.trim()) {
-      setVoidError('Please select or specify a reason for voiding this sale.');
+      setVoidError(t.salesHistory.voidReasonRequired || 'Please select or specify a reason for voiding this sale.');
       return;
     }
 
@@ -107,25 +109,18 @@ export const SalesHistoryPage: React.FC = () => {
       setIsDetailOpen(false);
       await fetchSales(pageInfo.page);
     } catch (err: any) {
-      setVoidError(err.message || 'Failed to void sale. Operation rejected.');
+      setVoidError(err.message || (language === 'am' ? 'ሽያጩን መሰረዝ አልተቻለም።' : 'Failed to void sale. Operation rejected.'));
     } finally {
       setIsVoiding(false);
     }
   };
 
-  const formatCurrency = (val: number) => {
-    return Number(val || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
   return (
     <div>
       <PageHead
-        eyebrow="Sales Ledger"
-        title="Sales History & Records"
-        subtitle="Itemized customer sales, invoice audit records, operational receipts, and voids"
+        eyebrow={language === 'am' ? 'የሽያጭ መዝገብ' : 'Sales Ledger'}
+        title={t.salesHistory.title}
+        subtitle={t.salesHistory.subtitle}
         actions={
           <button
             type="button"
@@ -134,7 +129,7 @@ export const SalesHistoryPage: React.FC = () => {
             disabled={isLoading}
           >
             <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-            <span>Refresh</span>
+            <span>{t.common.refresh}</span>
           </button>
         }
       />
@@ -147,7 +142,7 @@ export const SalesHistoryPage: React.FC = () => {
             <input
               type="text"
               className="input-search"
-              placeholder="Search by invoice number or customer name..."
+              placeholder={t.salesHistory.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -158,13 +153,13 @@ export const SalesHistoryPage: React.FC = () => {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All Statuses</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="VOIDED">Voided</option>
+            <option value="">{language === 'am' ? 'ሁሉም ሁኔታዎች' : 'All Statuses'}</option>
+            <option value="COMPLETED">{t.status.COMPLETED}</option>
+            <option value="VOIDED">{t.status.VOIDED}</option>
           </select>
 
           <button type="submit" className="btn btn-secondary btn-sm">
-            Filter
+            {t.common.filter}
           </button>
         </form>
 
@@ -173,37 +168,37 @@ export const SalesHistoryPage: React.FC = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Invoice #</th>
-                <th>Sold At</th>
-                <th>Customer</th>
-                <th>Items</th>
-                <th>Cashier</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th>{t.salesHistory.saleNumber}</th>
+                <th>{t.salesHistory.date}</th>
+                <th>{t.dashboard.customer}</th>
+                <th>{language === 'am' ? 'ዕቃዎች' : 'Items'}</th>
+                <th>{t.salesHistory.cashier}</th>
+                <th>{t.salesHistory.total}</th>
+                <th>{t.salesHistory.status}</th>
+                <th style={{ textAlign: 'right' }}>{t.common.actions}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    Loading sales records...
+                    {t.common.loading}
                   </td>
                 </tr>
               ) : sales.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: 'var(--muted)' }}>
-                    No sales records found.
+                    {t.common.noRecords}
                   </td>
                 </tr>
               ) : (
                 sales.map((sale) => (
                   <tr key={sale.id}>
                     <td style={{ fontWeight: 700 }}>{sale.invoiceNumber}</td>
-                    <td>{new Date(sale.soldAt).toLocaleString()}</td>
-                    <td>{sale.customerName || 'Walk-in'}</td>
-                    <td>{sale.items?.length || 0} line(s)</td>
-                    <td>{sale.cashierName || 'Staff'}</td>
+                    <td>{formatDate(sale.soldAt)}</td>
+                    <td>{sale.customerName || (language === 'am' ? 'ደንበኛ' : 'Walk-in')}</td>
+                    <td>{sale.items?.length || 0} {language === 'am' ? 'መስመር' : 'line(s)'}</td>
+                    <td>{sale.cashierName || (language === 'am' ? 'ሰራተኛ' : 'Staff')}</td>
                     <td style={{ fontWeight: 800 }}>{formatCurrency(sale.totalAmount)}</td>
                     <td>
                       <StatusBadge status={sale.status} variant="sale" />
@@ -213,7 +208,7 @@ export const SalesHistoryPage: React.FC = () => {
                         <button
                           type="button"
                           className="btn-icon"
-                          title="View Details"
+                          title={t.common.details}
                           onClick={() => {
                             setSelectedSale(sale);
                             setIsDetailOpen(true);
@@ -224,7 +219,7 @@ export const SalesHistoryPage: React.FC = () => {
                         <button
                           type="button"
                           className="btn-icon"
-                          title="Print Receipt"
+                          title={t.salesHistory.viewReceipt}
                           onClick={() => handleOpenReceipt(sale.id)}
                         >
                           <Printer size={16} color="var(--teal)" />
@@ -233,7 +228,7 @@ export const SalesHistoryPage: React.FC = () => {
                           <button
                             type="button"
                             className="btn-icon"
-                            title="Void Sale"
+                            title={t.salesHistory.voidSale}
                             onClick={() => handleOpenVoidModal(sale)}
                           >
                             <Ban size={16} color="var(--danger)" />
@@ -261,7 +256,9 @@ export const SalesHistoryPage: React.FC = () => {
             }}
           >
             <span>
-              Showing {sales.length} of {pageInfo.totalElements} records (Page {pageInfo.page + 1} of {pageInfo.totalPages})
+              {language === 'am'
+                ? `ከ ${pageInfo.totalElements} መዝገቦች ውስጥ ${sales.length} በማሳየት ላይ (ገጽ ${pageInfo.page + 1} ከ ${pageInfo.totalPages})`
+                : `Showing ${sales.length} of ${pageInfo.totalElements} records (Page ${pageInfo.page + 1} of ${pageInfo.totalPages})`}
             </span>
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
@@ -270,7 +267,7 @@ export const SalesHistoryPage: React.FC = () => {
                 disabled={pageInfo.page === 0}
                 onClick={() => fetchSales(pageInfo.page - 1)}
               >
-                Previous
+                {t.common.previous}
               </button>
               <button
                 type="button"
@@ -278,7 +275,7 @@ export const SalesHistoryPage: React.FC = () => {
                 disabled={pageInfo.page >= pageInfo.totalPages - 1}
                 onClick={() => fetchSales(pageInfo.page + 1)}
               >
-                Next
+                {t.common.next}
               </button>
             </div>
           </div>
@@ -289,7 +286,7 @@ export const SalesHistoryPage: React.FC = () => {
       <Modal
         isOpen={isDetailOpen}
         onClose={() => setIsDetailOpen(false)}
-        title={`Sale Detail — ${selectedSale?.invoiceNumber || ''}`}
+        title={`${language === 'am' ? 'የሽያጭ ዝርዝር' : 'Sale Detail'} — ${selectedSale?.invoiceNumber || ''}`}
         size="large"
         footer={
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -300,7 +297,7 @@ export const SalesHistoryPage: React.FC = () => {
                 onClick={() => handleOpenReceipt(selectedSale.id)}
               >
                 <Printer size={14} />
-                <span>Print Receipt</span>
+                <span>{t.salesHistory.viewReceipt}</span>
               </button>
             )}
             {canVoidSales && selectedSale?.status === 'COMPLETED' && (
@@ -313,7 +310,7 @@ export const SalesHistoryPage: React.FC = () => {
                 }}
               >
                 <Ban size={14} />
-                <span>Void Sale</span>
+                <span>{t.salesHistory.voidSale}</span>
               </button>
             )}
             <button
@@ -321,7 +318,7 @@ export const SalesHistoryPage: React.FC = () => {
               className="btn btn-secondary btn-sm"
               onClick={() => setIsDetailOpen(false)}
             >
-              Close
+              {t.common.close}
             </button>
           </div>
         }
@@ -330,16 +327,22 @@ export const SalesHistoryPage: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Sold At</span>
-                <div style={{ fontWeight: 600 }}>{new Date(selectedSale.soldAt).toLocaleString()}</div>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                  {t.salesHistory.date}
+                </span>
+                <div style={{ fontWeight: 600 }}>{formatDate(selectedSale.soldAt)}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Cashier</span>
-                <div style={{ fontWeight: 600 }}>{selectedSale.cashierName || 'Staff'}</div>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                  {t.salesHistory.cashier}
+                </span>
+                <div style={{ fontWeight: 600 }}>{selectedSale.cashierName || (language === 'am' ? 'ሰራተኛ' : 'Staff')}</div>
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>Customer</span>
-                <div style={{ fontWeight: 600 }}>{selectedSale.customerName || 'Walk-in'}</div>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                  {t.dashboard.customer}
+                </span>
+                <div style={{ fontWeight: 600 }}>{selectedSale.customerName || (language === 'am' ? 'ደንበኛ' : 'Walk-in')}</div>
               </div>
             </div>
 
@@ -354,8 +357,8 @@ export const SalesHistoryPage: React.FC = () => {
                   fontSize: '13px',
                 }}
               >
-                <strong>VOIDED SALE:</strong> {selectedSale.voidReason || 'No reason provided'} (on{' '}
-                {selectedSale.voidedAt ? new Date(selectedSale.voidedAt).toLocaleString() : 'N/A'})
+                <strong>{language === 'am' ? 'የተሰረዘ ሽያጭ:' : 'VOIDED SALE:'}</strong> {selectedSale.voidReason || (language === 'am' ? 'ምክንያት አልተገለጸም' : 'No reason provided')} ({language === 'am' ? 'በ ' : 'on '}
+                {selectedSale.voidedAt ? formatDate(selectedSale.voidedAt) : 'N/A'})
               </div>
             )}
 
@@ -363,12 +366,12 @@ export const SalesHistoryPage: React.FC = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Product</th>
-                    <th>Unit</th>
-                    <th style={{ textAlign: 'center' }}>Qty</th>
-                    <th style={{ textAlign: 'right' }}>Unit Price</th>
-                    <th style={{ textAlign: 'right' }}>Discount</th>
-                    <th style={{ textAlign: 'right' }}>Line Total</th>
+                    <th>{language === 'am' ? 'ምርት' : 'Product'}</th>
+                    <th>{language === 'am' ? 'መለኪያ' : 'Unit'}</th>
+                    <th style={{ textAlign: 'center' }}>{t.common.quantity}</th>
+                    <th style={{ textAlign: 'right' }}>{t.common.unitPrice}</th>
+                    <th style={{ textAlign: 'right' }}>{t.pos.orderDiscount}</th>
+                    <th style={{ textAlign: 'right' }}>{language === 'am' ? 'ጠቅላላ ዋጋ' : 'Line Total'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -392,12 +395,12 @@ export const SalesHistoryPage: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <div style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)' }}>
-                  <span>Subtotal:</span>
+                  <span>{t.pos.subtotal}:</span>
                   <span>{formatCurrency(selectedSale.subtotal)}</span>
                 </div>
                 {Number(selectedSale.discountAmount) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--danger)' }}>
-                    <span>Discount:</span>
+                    <span>{t.pos.orderDiscount}:</span>
                     <span>-{formatCurrency(selectedSale.discountAmount)}</span>
                   </div>
                 )}
@@ -412,7 +415,7 @@ export const SalesHistoryPage: React.FC = () => {
                     paddingTop: '6px',
                   }}
                 >
-                  <span>Grand Total:</span>
+                  <span>{t.pos.grandTotal}:</span>
                   <span>{formatCurrency(selectedSale.totalAmount)}</span>
                 </div>
               </div>
@@ -425,7 +428,7 @@ export const SalesHistoryPage: React.FC = () => {
       <Modal
         isOpen={isVoidModalOpen}
         onClose={() => setIsVoidModalOpen(false)}
-        title="Void Sale & Restore Inventory"
+        title={t.salesHistory.voidConfirmTitle}
         footer={
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -433,7 +436,7 @@ export const SalesHistoryPage: React.FC = () => {
               className="btn btn-secondary btn-sm"
               onClick={() => setIsVoidModalOpen(false)}
             >
-              Cancel
+              {t.common.cancel}
             </button>
             <button
               type="button"
@@ -441,35 +444,43 @@ export const SalesHistoryPage: React.FC = () => {
               onClick={handleConfirmVoid}
               disabled={isVoiding}
             >
-              {isVoiding ? 'Voiding...' : 'Confirm Void'}
+              {isVoiding ? t.salesHistory.voiding : t.common.confirm}
             </button>
           </div>
         }
       >
         {voidError && <Alert type="error" message={voidError} onDismiss={() => setVoidError(null)} />}
         <p style={{ fontSize: '13.5px', color: 'var(--text)', margin: 0 }}>
-          You are voiding invoice <strong>{selectedSale?.invoiceNumber}</strong> for total amount{' '}
-          <strong>{formatCurrency(selectedSale?.totalAmount || 0)}</strong>.
+          {language === 'am' ? (
+            <>
+              የደረሰኝ ቁጥር <strong>{selectedSale?.invoiceNumber}</strong> ጠቅላላ ዋጋ{' '}
+              <strong>{formatCurrency(selectedSale?.totalAmount || 0)}</strong> ሽያጭ ሊሰርዙ ነው።
+            </>
+          ) : (
+            <>
+              You are voiding invoice <strong>{selectedSale?.invoiceNumber}</strong> for total amount{' '}
+              <strong>{formatCurrency(selectedSale?.totalAmount || 0)}</strong>.
+            </>
+          )}
         </p>
-        <p style={{ fontSize: '12.5px', color: 'var(--muted)', margin: 0 }}>
-          This operation is irreversible: items sold will be atomically returned to on-hand inventory stock and a
-          compensating reversal ledger entry will be recorded.
+        <p style={{ fontSize: '12.5px', color: 'var(--muted)', margin: '8px 0 0' }}>
+          {t.salesHistory.voidConfirmMsg}
         </p>
 
         <div className="form-group" style={{ marginTop: '12px' }}>
-          <label className="form-label">Reason for Void *</label>
+          <label className="form-label">{t.salesHistory.voidReason} *</label>
           <select
             className="form-select"
             value={voidReason}
             onChange={(e) => setVoidReason(e.target.value)}
             required
           >
-            <option value="">-- Select Reason Code --</option>
-            <option value="CUSTOMER_CANCEL">Customer Cancelled Transaction</option>
-            <option value="DEFECTIVE_RETURN">Defective Materials / Immediate Return</option>
-            <option value="MISTAKE">Cashier Keying Mistake</option>
-            <option value="DUPLICATE">Duplicate Submission</option>
-            <option value="OTHER">Other Operational Reason</option>
+            <option value="">{language === 'am' ? '-- የምክንያት ኮድ ይምረጡ --' : '-- Select Reason Code --'}</option>
+            <option value="CUSTOMER_CANCEL">{language === 'am' ? 'ደንበኛው ግብይቱን ሰርዟል' : 'Customer Cancelled Transaction'}</option>
+            <option value="DEFECTIVE_RETURN">{language === 'am' ? 'ጉድለት ያለበት እቃ / ወዲያው የተመለሰ' : 'Defective Materials / Immediate Return'}</option>
+            <option value="MISTAKE">{language === 'am' ? 'የገንዘብ ተቀባይ ስህተት' : 'Cashier Keying Mistake'}</option>
+            <option value="DUPLICATE">{language === 'am' ? 'የተደገመ ግብይት' : 'Duplicate Submission'}</option>
+            <option value="OTHER">{language === 'am' ? 'ሌላ ተግባራዊ ምክንያት' : 'Other Operational Reason'}</option>
           </select>
         </div>
       </Modal>

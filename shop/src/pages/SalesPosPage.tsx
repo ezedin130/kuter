@@ -21,6 +21,7 @@ import {
   CreateSaleItemRequestDto,
   SaleReceiptResponseDto,
 } from '../api/types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface CartItem {
   product: ProductSummary;
@@ -35,6 +36,7 @@ interface CartItem {
 
 export const SalesPosPage: React.FC = () => {
   const { isOwner } = useAuth();
+  const { t, formatCurrency, language } = useLanguage();
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [categories, setCategories] = useState<CategoryResponse[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -45,7 +47,7 @@ export const SalesPosPage: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState<string>('');
   const [customerPhone, setCustomerPhone] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
+  const [notes] = useState<string>('');
   const [orderDiscount, setOrderDiscount] = useState<number>(0);
 
   // Submission & Receipt state
@@ -65,7 +67,7 @@ export const SalesPosPage: React.FC = () => {
         ]);
         setCategories(catRes.data?.content || []);
         setProducts(prodRes.data?.content || []);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to load POS catalog:', err);
       } finally {
         setIsLoadingProducts(false);
@@ -150,7 +152,6 @@ export const SalesPosPage: React.FC = () => {
             unitPrice: calculatedPrice,
           };
         }
-
         return item;
       })
     );
@@ -161,27 +162,25 @@ export const SalesPosPage: React.FC = () => {
       prev
         .map((item, idx) => {
           if (idx !== index) return item;
-          const nextQty = Math.max(1, item.quantity + delta);
-          return { ...item, quantity: nextQty };
+          const newQty = item.quantity + delta;
+          return newQty > 0 ? { ...item, quantity: newQty } : null;
         })
-        .filter((item) => item.quantity > 0)
+        .filter(Boolean) as CartItem[]
     );
   };
 
-  const handleSetQty = (index: number, qtyStr: string) => {
-    const val = parseFloat(qtyStr);
-    if (isNaN(val) || val <= 0) return;
+  const handleSetQty = (index: number, val: string) => {
+    const qty = parseInt(val) || 1;
     setCart((prev) =>
-      prev.map((item, idx) => (idx === index ? { ...item, quantity: val } : item))
+      prev.map((item, idx) => (idx === index ? { ...item, quantity: Math.max(1, qty) } : item))
     );
   };
 
-  const handleSetUnitPrice = (index: number, priceStr: string) => {
-    if (!isOwner) return;
-    const val = parseFloat(priceStr);
-    if (isNaN(val) || val < 0) return;
+  const handleSetUnitPrice = (index: number, val: string) => {
+    if (!isOwner) return; // Only owner can override base selling price
+    const price = parseFloat(val) || 0;
     setCart((prev) =>
-      prev.map((item, idx) => (idx === index ? { ...item, unitPrice: val } : item))
+      prev.map((item, idx) => (idx === index ? { ...item, unitPrice: Math.max(0, price) } : item))
     );
   };
 
@@ -191,112 +190,70 @@ export const SalesPosPage: React.FC = () => {
 
   // Calculations
   const subtotal = cart.reduce((acc, item) => {
-    const lineTotal = Math.max(0, item.quantity * item.unitPrice - (item.discountAmount || 0));
-    return acc + lineTotal;
+    const lineTotal = item.quantity * item.unitPrice - (item.discountAmount || 0);
+    return acc + Math.max(0, lineTotal);
   }, 0);
 
   const grandTotal = Math.max(0, subtotal - (orderDiscount || 0));
 
-  // Finalize Sale
+  // Submit sale to backend API
   const handleFinalizeSale = async () => {
-    if (cart.length === 0) {
-      setError('Please add at least one item to the cart.');
-      return;
-    }
-
-    setIsSubmitting(true);
+    if (cart.length === 0) return;
     setError(null);
+    setIsSubmitting(true);
 
-    const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : 'sale-' + Date.now();
-
-    const salePayload: CreateSaleRequestDto = {
-      customerName: customerName.trim() || undefined,
-      customerPhone: customerPhone.trim() || undefined,
-      notes: notes.trim() || undefined,
-      discountAmount: orderDiscount > 0 ? orderDiscount : 0,
-      idempotencyKey,
-      items: cart.map((item): CreateSaleItemRequestDto => ({
+    try {
+      const itemsPayload: CreateSaleItemRequestDto[] = cart.map((item) => ({
         productId: item.product.id,
         unitDefinitionId: item.selectedUnitId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
-        discountAmount: item.discountAmount > 0 ? item.discountAmount : 0,
-      })),
-    };
+        discountAmount: item.discountAmount || 0,
+      }));
 
-    try {
-      const res = await shopApi.createSale(salePayload);
-      if (res.data) {
-        // Fetch full printable receipt
-        try {
-          const receiptRes = await shopApi.getSaleReceipt(res.data.id);
-          setSuccessReceipt(receiptRes.data);
-          setIsReceiptOpen(true);
-        } catch {
-          // Construct minimal receipt from response
-          setSuccessReceipt({
-            shopName: 'Building Materials Shop',
-            invoiceNumber: res.data.invoiceNumber,
-            soldAt: res.data.soldAt,
-            cashierName: res.data.cashierName,
-            customerName: res.data.customerName,
-            items: res.data.items.map((i) => ({
-              productSku: i.productSku,
-              productName: i.productName,
-              unitCode: i.unitCode,
-              quantity: i.quantity,
-              unitPrice: i.unitPrice,
-              discountAmount: i.discountAmount,
-              lineTotal: i.lineTotal,
-            })),
-            subtotal: res.data.subtotal,
-            discountAmount: res.data.discountAmount,
-            taxAmount: res.data.taxAmount,
-            totalAmount: res.data.totalAmount,
-            status: res.data.status,
-            disclaimer: 'Operational Sales Record - Not a Proof of Payment',
-          });
-          setIsReceiptOpen(true);
-        }
+      const payload: CreateSaleRequestDto = {
+        customerName: customerName.trim() || undefined,
+        customerPhone: customerPhone.trim() || undefined,
+        notes: notes.trim() || undefined,
+        discountAmount: orderDiscount || 0,
+        items: itemsPayload,
+      };
 
-        // Reset cart for next customer
-        setCart([]);
-        setCustomerName('');
-        setCustomerPhone('');
-        setNotes('');
-        setOrderDiscount(0);
+      const res = await shopApi.createSale(payload);
+      const savedSale = res.data;
 
-        // Refresh product stock levels in catalog
-        const updatedProds = await shopApi.listProducts({ size: 100 });
-        setProducts(updatedProds.data?.content || []);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to process sale. Please check inventory stock balances.');
+      // Fetch official operational receipt
+      const receiptRes = await shopApi.getSaleReceipt(savedSale.id);
+      setSuccessReceipt(receiptRes.data);
+      setIsReceiptOpen(true);
+
+      // Reset cart
+      setCart([]);
+      setCustomerName('');
+      setCustomerPhone('');
+      setOrderDiscount(0);
+
+      // Refresh product stock count
+      const prodRes = await shopApi.listProducts({ size: 100 });
+      setProducts(prodRes.data?.content || []);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : (language === 'am' ? 'ሽያጩን ማጠናቀቅ አልተቻለም።' : 'Failed to finalize sale.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const formatCurrency = (val: number) => {
-    return Number(val || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
   return (
-    <div>
+    <div className="pos-layout-wrapper">
       <PageHead
-        eyebrow="Counter Operations"
-        title="Counter Point of Sale"
-        subtitle="Fast retail checkout with instant dual-UOM conversion and live stock validation"
+        eyebrow={language === 'am' ? 'የሽያጭ መመዝገቢያ' : 'Counter Operations'}
+        title={t('pos.title')}
+        subtitle={t('pos.subtitle')}
       />
 
       {error && <Alert type="error" message={error} onDismiss={() => setError(null)} />}
 
-      <div className="pos-layout">
+      <div className="pos-main-grid">
         {/* Left Pane: Catalog Browser */}
         <div className="pos-catalog-pane">
           <div className="pos-catalog-header">
@@ -305,7 +262,7 @@ export const SalesPosPage: React.FC = () => {
               <input
                 type="text"
                 className="input-search"
-                placeholder="Search products by name, SKU, or barcode..."
+                placeholder={t('pos.searchProduct')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -316,7 +273,7 @@ export const SalesPosPage: React.FC = () => {
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
-              <option value="">All Categories</option>
+              <option value="">{t('pos.allCategories')}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -328,11 +285,11 @@ export const SalesPosPage: React.FC = () => {
           <div className="pos-products-grid">
             {isLoadingProducts ? (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
-                Loading product catalog...
+                {t('common.loading')}
               </div>
             ) : filteredProducts.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>
-                No products found matching search criteria.
+                {t('common.noRecordsDesc')}
               </div>
             ) : (
               filteredProducts.map((p) => {
@@ -376,14 +333,14 @@ export const SalesPosPage: React.FC = () => {
           <div className="pos-cart-header">
             <div className="pos-cart-title">
               <ShoppingCart size={18} color="var(--teal)" />
-              <span>Current Cart ({cart.length})</span>
+              <span>{t('pos.cart')} ({cart.length})</span>
             </div>
             {cart.length > 0 && (
               <button
                 type="button"
                 className="btn-icon"
                 onClick={() => setCart([])}
-                title="Clear Cart"
+                title={t('pos.clearCart')}
               >
                 <Trash2 size={16} color="var(--danger)" />
               </button>
@@ -394,8 +351,7 @@ export const SalesPosPage: React.FC = () => {
             {cart.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
                 <ShoppingCart size={32} style={{ marginBottom: '8px', opacity: 0.3 }} />
-                <p style={{ fontSize: '13px', margin: 0 }}>Cart is empty.</p>
-                <p style={{ fontSize: '11.5px', marginTop: '4px' }}>Click items on the left to add.</p>
+                <p style={{ fontSize: '13px', margin: 0 }}>{t('pos.cartEmpty')}</p>
               </div>
             ) : (
               cart.map((item, idx) => {
@@ -421,7 +377,7 @@ export const SalesPosPage: React.FC = () => {
                       {/* Unit Selector (Dual-UOM) */}
                       <div>
                         <label style={{ fontSize: '10.5px', color: 'var(--muted)', display: 'block', marginBottom: '2px' }}>
-                          Unit
+                          {t('pos.selectUnit')}
                         </label>
                         <select
                           className="form-select"
@@ -430,7 +386,7 @@ export const SalesPosPage: React.FC = () => {
                           onChange={(e) => handleUnitChange(idx, e.target.value)}
                         >
                           <option value={item.product.baseUnitId}>
-                            {item.product.baseUnitCode} (Base)
+                            {item.product.baseUnitCode} ({language === 'am' ? 'መሰረታዊ' : 'Base'})
                           </option>
                           {item.conversions.map((conv) => (
                             <option key={conv.id} value={conv.unitDefinitionId}>
@@ -443,7 +399,7 @@ export const SalesPosPage: React.FC = () => {
                       {/* Unit Price Input */}
                       <div>
                         <label style={{ fontSize: '10.5px', color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '2px' }}>
-                          Unit Price {!isOwner && <span title="Authoritative owner price (locked for non-owners)"><Lock size={10} /></span>}
+                          {t('common.unitPrice')} {!isOwner && <span title="Authoritative owner price (locked for non-owners)"><Lock size={10} /></span>}
                         </label>
                         <input
                           type="number"
@@ -504,13 +460,13 @@ export const SalesPosPage: React.FC = () => {
 
           {/* Cart Footer */}
           <div className="pos-cart-footer">
-            {/* Customer Details Accordion / Fields */}
+            {/* Customer Details */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
               <input
                 type="text"
                 className="form-input"
                 style={{ height: '32px', fontSize: '12px' }}
-                placeholder="Customer Name (optional)"
+                placeholder={t('pos.customerName')}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
               />
@@ -518,19 +474,19 @@ export const SalesPosPage: React.FC = () => {
                 type="text"
                 className="form-input"
                 style={{ height: '32px', fontSize: '12px' }}
-                placeholder="Customer Phone (optional)"
+                placeholder={t('pos.customerPhone')}
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
               />
             </div>
 
             <div className="cart-summary-line">
-              <span>Subtotal</span>
+              <span>{t('pos.subtotal')}</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
 
             <div className="cart-summary-line" style={{ alignItems: 'center' }}>
-              <span>Order Discount</span>
+              <span>{t('pos.orderDiscount')}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--muted)' }}>-</span>
                 <input
@@ -546,7 +502,7 @@ export const SalesPosPage: React.FC = () => {
             </div>
 
             <div className="cart-total-line">
-              <span>Grand Total</span>
+              <span>{t('pos.grandTotal')}</span>
               <span style={{ color: 'var(--teal)' }}>{formatCurrency(grandTotal)}</span>
             </div>
 
@@ -558,11 +514,11 @@ export const SalesPosPage: React.FC = () => {
               disabled={isSubmitting || cart.length === 0}
             >
               {isSubmitting ? (
-                <span>Recording Sale...</span>
+                <span>{t('pos.completingSale')}</span>
               ) : (
                 <>
                   <CheckCircle2 size={18} />
-                  <span>Finalize & Print Receipt</span>
+                  <span>{t('pos.completeSale')}</span>
                 </>
               )}
             </button>

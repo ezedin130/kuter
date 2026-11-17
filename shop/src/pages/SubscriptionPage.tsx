@@ -9,8 +9,10 @@ import { PageHead } from '../components/PageHead';
 import { Alert } from '../components/Alert';
 import { shopApi } from '../api/client';
 import { TenantSubscriptionInfo } from '../api/types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const SubscriptionPage: React.FC = () => {
+  const { t, formatDate, language } = useLanguage();
   const [sub, setSub] = useState<TenantSubscriptionInfo | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,9 +37,9 @@ export const SubscriptionPage: React.FC = () => {
   return (
     <div>
       <PageHead
-        eyebrow="License & Quotas"
-        title="Shop Subscription & Quotas"
-        subtitle="Self-inspection of your current subscription tier, capacity limits, and operational feature entitlements"
+        eyebrow={language === 'am' ? 'ፈቃድ እና ኮታዎች' : 'License & Quotas'}
+        title={t.subscription.title}
+        subtitle={t.subscription.subtitle}
         actions={
           <button
             type="button"
@@ -46,7 +48,7 @@ export const SubscriptionPage: React.FC = () => {
             disabled={isLoading}
           >
             <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
-            <span>Refresh</span>
+            <span>{t.common.refresh}</span>
           </button>
         }
       />
@@ -55,7 +57,7 @@ export const SubscriptionPage: React.FC = () => {
 
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: '60px', color: 'var(--muted)' }}>
-          Loading subscription status and quotas...
+          {language === 'am' ? 'የደንበኝነት ምዝገባ ሁኔታ እና ኮታዎችን በመጫን ላይ...' : 'Loading subscription status and quotas...'}
         </div>
       ) : sub ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -80,13 +82,13 @@ export const SubscriptionPage: React.FC = () => {
                     color: 'var(--teal-soft)',
                   }}
                 >
-                  Current Active Plan
+                  {t.subscription.currentPlan}
                 </span>
                 <h2 style={{ fontSize: '32px', fontWeight: 800, color: 'white', marginTop: '4px' }}>
                   {sub.planName}
                 </h2>
                 <p style={{ color: '#b2c8d2', fontSize: '14px', marginTop: '4px' }}>
-                  Plan Code: <code>{sub.planCode}</code>
+                  {language === 'am' ? 'የፕላን ኮድ:' : 'Plan Code:'} <code>{sub.planCode}</code>
                 </p>
               </div>
 
@@ -106,7 +108,9 @@ export const SubscriptionPage: React.FC = () => {
                   {sub.status}
                 </span>
                 <span style={{ fontSize: '13px', color: '#b2c8d2' }}>
-                  {sub.daysRemaining != null ? `${sub.daysRemaining} days remaining in current billing cycle` : ''}
+                  {sub.daysRemaining != null
+                    ? (language === 'am' ? `በአሁኑ የክፍያ ዑደት ውስጥ ${sub.daysRemaining} ቀናት ይቀራሉ` : `${sub.daysRemaining} days remaining in current billing cycle`)
+                    : ''}
                 </span>
               </div>
             </div>
@@ -122,21 +126,23 @@ export const SubscriptionPage: React.FC = () => {
               }}
             >
               <div>
-                <span style={{ fontSize: '11.5px', color: '#9bb7c4', textTransform: 'uppercase' }}>Period Start</span>
+                <span style={{ fontSize: '11.5px', color: '#9bb7c4', textTransform: 'uppercase' }}>{language === 'am' ? 'የጊዜ ጅማሬ' : 'Period Start'}</span>
                 <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>
-                  {new Date(sub.currentPeriodStart).toLocaleDateString()}
+                  {formatDate(sub.currentPeriodStart)}
                 </div>
               </div>
               <div>
-                <span style={{ fontSize: '11.5px', color: '#9bb7c4', textTransform: 'uppercase' }}>Renewal / End Date</span>
+                <span style={{ fontSize: '11.5px', color: '#9bb7c4', textTransform: 'uppercase' }}>{t.subscription.expiryDate}</span>
                 <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>
-                  {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+                  {formatDate(sub.currentPeriodEnd)}
                 </div>
               </div>
               <div>
-                <span style={{ fontSize: '11.5px', color: '#9bb7c4', textTransform: 'uppercase' }}>Cancellation Status</span>
+                <span style={{ fontSize: '11.5px', color: '#9bb7c4', textTransform: 'uppercase' }}>{language === 'am' ? 'የስረዛ ሁኔታ' : 'Cancellation Status'}</span>
                 <div style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>
-                  {sub.cancelAtPeriodEnd ? 'Scheduled to cancel at period end' : 'Auto-renewing active contract'}
+                  {sub.cancelAtPeriodEnd
+                    ? (language === 'am' ? 'በጊዜው ማብቂያ ላይ እንዲሰረዝ ተይዟል' : 'Scheduled to cancel at period end')
+                    : (language === 'am' ? 'በራስ-ሰር የሚታደስ ንቁ ውል' : 'Auto-renewing active contract')}
                 </div>
               </div>
             </div>
@@ -145,7 +151,7 @@ export const SubscriptionPage: React.FC = () => {
           {/* Quota Limits Card */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '20px' }}>
-              Capacity Quotas & Resource Consumption
+              {t.subscription.quotas}
             </h2>
             {(() => {
               const productCount = sub.usage?.productCount ?? (sub as any).activeProductsCount ?? 0;
@@ -171,11 +177,11 @@ export const SubscriptionPage: React.FC = () => {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <Package size={20} color="var(--teal)" />
-                      <span style={{ fontWeight: 700, fontSize: '15px' }}>Catalog Products</span>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>{t.subscription.productsQuota}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
-                      <span>Used: <strong>{productCount}</strong> products</span>
-                      <span>Limit: <strong>{isProductUnlimited ? 'Unlimited' : productLimit}</strong> allowed</span>
+                      <span>{language === 'am' ? 'ጥቅም ላይ የዋለ: ' : 'Used: '}<strong>{productCount}</strong> {language === 'am' ? 'ምርቶች' : 'products'}</span>
+                      <span>{language === 'am' ? 'ገደብ: ' : 'Limit: '}<strong>{isProductUnlimited ? (language === 'am' ? 'ያልተገደበ' : 'Unlimited') : productLimit}</strong></span>
                     </div>
                     <div style={{ height: '8px', background: '#e2e8e7', borderRadius: '4px', overflow: 'hidden' }}>
                       <div
@@ -188,7 +194,9 @@ export const SubscriptionPage: React.FC = () => {
                       />
                     </div>
                     <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '8px' }}>
-                      {isProductUnlimited ? 'Unlimited catalog products allowed' : `${Math.max(0, productLimit - productCount)} product slots remaining`}
+                      {isProductUnlimited
+                        ? (language === 'am' ? 'ያልተገደበ የምርት ካታሎግ ይፈቀዳል' : 'Unlimited catalog products allowed')
+                        : (language === 'am' ? `${Math.max(0, productLimit - productCount)} ምርቶች ይቀራሉ` : `${Math.max(0, productLimit - productCount)} product slots remaining`)}
                     </div>
                   </div>
 
@@ -203,11 +211,11 @@ export const SubscriptionPage: React.FC = () => {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <Users size={20} color="var(--blue)" />
-                      <span style={{ fontWeight: 700, fontSize: '15px' }}>Staff Accounts</span>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>{t.subscription.staffQuota}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
-                      <span>Active: <strong>{userCount}</strong> users</span>
-                      <span>Limit: <strong>{isUserUnlimited ? 'Unlimited' : userLimit}</strong> seats</span>
+                      <span>{language === 'am' ? 'ንቁ: ' : 'Active: '}<strong>{userCount}</strong> {language === 'am' ? 'ተጠቃሚዎች' : 'users'}</span>
+                      <span>{language === 'am' ? 'ገደብ: ' : 'Limit: '}<strong>{isUserUnlimited ? (language === 'am' ? 'ያልተገደበ' : 'Unlimited') : userLimit}</strong></span>
                     </div>
                     <div style={{ height: '8px', background: '#e2e8e7', borderRadius: '4px', overflow: 'hidden' }}>
                       <div
@@ -220,7 +228,9 @@ export const SubscriptionPage: React.FC = () => {
                       />
                     </div>
                     <div style={{ fontSize: '11.5px', color: 'var(--faint)', marginTop: '8px' }}>
-                      {isUserUnlimited ? 'Unlimited staff accounts allowed' : `${Math.max(0, userLimit - userCount)} user seats remaining`}
+                      {isUserUnlimited
+                        ? (language === 'am' ? 'ያልተገደበ የሰራተኞች መለያ ይፈቀዳል' : 'Unlimited staff accounts allowed')
+                        : (language === 'am' ? `${Math.max(0, userLimit - userCount)} የተጠቃሚ ቦታዎች ይቀራሉ` : `${Math.max(0, userLimit - userCount)} user seats remaining`)}
                     </div>
                   </div>
                 </div>
@@ -231,15 +241,19 @@ export const SubscriptionPage: React.FC = () => {
           {/* Entitlements Card */}
           <div className="card">
             <h2 className="card-title" style={{ marginBottom: '16px' }}>
-              Plan Entitlements & Features
+              {language === 'am' ? 'የፕላን መብቶች እና ባህሪያት' : 'Plan Entitlements & Features'}
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <CheckCircle size={18} color="var(--teal)" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>Dual-UOM Conversion Engine</div>
+                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                    {language === 'am' ? 'ድርብ የመለኪያ ልወጣ ሞተር (Dual-UOM)' : 'Dual-UOM Conversion Engine'}
+                  </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                    Multi-unit retail sales and packaging conversions (Pieces, Bundles, Tons).
+                    {language === 'am'
+                      ? 'በተለያዩ የችርቻሮ መለኪያዎች መሸጥ እና ማሸግ (ፍሬ፣ ጥቅል፣ ቶን)።'
+                      : 'Multi-unit retail sales and packaging conversions (Pieces, Bundles, Tons).'}
                   </div>
                 </div>
               </div>
@@ -247,9 +261,13 @@ export const SubscriptionPage: React.FC = () => {
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <CheckCircle size={18} color="var(--teal)" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>Moving Weighted-Average Costing</div>
+                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                    {language === 'am' ? 'ተለዋዋጭ አማካይ ወጪ ስሌት (Weighted-Average)' : 'Moving Weighted-Average Costing'}
+                  </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                    Continuous COGS tracking across deliveries and retail inventory balances.
+                    {language === 'am'
+                      ? 'የተሸጡ ዕቃዎች ቀጣይነት ያለው የወጪ ክትትል እና የክምችት ሚዛን።'
+                      : 'Continuous COGS tracking across deliveries and retail inventory balances.'}
                   </div>
                 </div>
               </div>
@@ -257,9 +275,13 @@ export const SubscriptionPage: React.FC = () => {
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <CheckCircle size={18} color="var(--teal)" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>Immutable Movement Ledger</div>
+                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                    {language === 'am' ? 'የማይለወጥ የእንቅስቃሴ መዝገብ' : 'Immutable Movement Ledger'}
+                  </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                    Tamper-proof stock movement records for receipts, sales, voids, and shrinkage adjustments.
+                    {language === 'am'
+                      ? 'ለገቢዎች፣ ሽያጮች፣ ስረዛዎች እና ብክነቶች አስተማማኝ የክምችት እንቅስቃሴ መዝገብ።'
+                      : 'Tamper-proof stock movement records for receipts, sales, voids, and shrinkage adjustments.'}
                   </div>
                 </div>
               </div>
@@ -267,9 +289,13 @@ export const SubscriptionPage: React.FC = () => {
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                 <CheckCircle size={18} color="var(--teal)" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>Role-Based Access Control</div>
+                  <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                    {language === 'am' ? 'በሚና ላይ የተመሰረተ የመዳረሻ ቁጥጥር' : 'Role-Based Access Control'}
+                  </div>
                   <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-                    Owner, Manager, Storekeeper, and Cashier segregation with financial redaction.
+                    {language === 'am'
+                      ? 'ባለቤት፣ ስራ አስኪያጅ፣ መጋዘን ኃላፊ እና ገንዘብ ተቀባይ መለያየት ከገንዘብ ሚስጥራዊነት ጋር።'
+                      : 'Owner, Manager, Storekeeper, and Cashier segregation with financial redaction.'}
                   </div>
                 </div>
               </div>
