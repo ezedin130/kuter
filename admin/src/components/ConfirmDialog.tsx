@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from './Modal';
 import { AlertTriangle, CheckCircle2, Info, AlertOctagon } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ConfirmDialogProps {
   title: string;
@@ -19,15 +20,20 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   title,
   message,
   detail,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   tone = 'primary',
   isOpen,
   isLoading = false,
   onConfirm,
   onCancel,
 }) => {
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
+
+  const resolvedConfirmLabel = confirmLabel || t('common.confirm');
+  const resolvedCancelLabel = cancelLabel || t('common.cancel');
 
   const getToneIcon = () => {
     switch (tone) {
@@ -48,6 +54,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         return 'btn btn-danger';
       case 'warning':
         return 'btn btn-warning';
+      case 'info':
+        return 'btn btn-primary';
       default:
         return 'btn btn-primary';
     }
@@ -55,24 +63,24 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   return (
     <Modal title={title} onClose={onCancel} maxWidth="480px">
-      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '8px 0' }}>
         <div style={{ flexShrink: 0, marginTop: '2px' }}>{getToneIcon()}</div>
         <div style={{ flex: 1 }}>
-          <p style={{ margin: 0, color: 'var(--text)', fontSize: '14px', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.5, color: 'var(--ink)' }}>
             {message}
           </p>
           {detail && <div style={{ marginTop: '12px' }}>{detail}</div>}
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '24px' }}>
+      <div className="modal-actions" style={{ marginTop: '24px' }}>
         <button
           type="button"
           className="btn btn-secondary"
           onClick={onCancel}
           disabled={isLoading}
         >
-          {cancelLabel}
+          {resolvedCancelLabel}
         </button>
         <button
           type="button"
@@ -80,7 +88,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           onClick={onConfirm}
           disabled={isLoading}
         >
-          {isLoading ? 'Processing...' : confirmLabel}
+          {isLoading ? t('common.loading') : resolvedConfirmLabel}
         </button>
       </div>
     </Modal>

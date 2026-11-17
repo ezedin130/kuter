@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, ChevronLeft, ChevronRight, Inbox, AlertCircle, RefreshCw } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export interface Column<T> {
   key: string;
@@ -37,14 +38,20 @@ export function DataTable<T>({
   totalPages = 1,
   totalElements = 0,
   onPageChange,
-  searchPlaceholder = 'Search records...',
+  searchPlaceholder,
   searchValue,
   onSearchChange,
   filterComponent,
-  emptyTitle = 'No records found',
-  emptyMessage = 'There are no items matching the current criteria.',
+  emptyTitle,
+  emptyMessage,
   rowKey,
 }: DataTableProps<T>) {
+  const { t } = useLanguage();
+
+  const resolvedSearchPlaceholder = searchPlaceholder || t('common.searchRecords');
+  const resolvedEmptyTitle = emptyTitle || t('common.noRecords');
+  const resolvedEmptyMessage = emptyMessage || t('common.noRecordsDesc');
+
   return (
     <div className="table-container-card">
       {/* Table Toolbar */}
@@ -55,7 +62,7 @@ export function DataTable<T>({
               <Search size={16} className="search-icon" />
               <input
                 type="text"
-                placeholder={searchPlaceholder}
+                placeholder={resolvedSearchPlaceholder}
                 value={searchValue || ''}
                 onChange={(e) => onSearchChange(e.target.value)}
                 className="table-search-input"
@@ -66,7 +73,7 @@ export function DataTable<T>({
                   className="search-clear-btn"
                   onClick={() => onSearchChange('')}
                 >
-                  Clear
+                  {t('common.clear')}
                 </button>
               )}
             </div>
@@ -106,11 +113,11 @@ export function DataTable<T>({
                 <td colSpan={columns.length} className="table-message-cell">
                   <div className="table-state-box error-state">
                     <AlertCircle size={28} className="state-icon" />
-                    <h4>Failed to load data</h4>
+                    <h4>{t('common.failedToLoad')}</h4>
                     <p>{error}</p>
                     {onRetry && (
                       <button type="button" className="btn btn-secondary btn-sm" onClick={onRetry}>
-                        <RefreshCw size={14} /> Retry
+                        <RefreshCw size={14} /> {t('common.retry')}
                       </button>
                     )}
                   </div>
@@ -122,8 +129,8 @@ export function DataTable<T>({
                 <td colSpan={columns.length} className="table-message-cell">
                   <div className="table-state-box empty-state">
                     <Inbox size={32} className="state-icon" />
-                    <h4>{emptyTitle}</h4>
-                    <p>{emptyMessage}</p>
+                    <h4>{resolvedEmptyTitle}</h4>
+                    <p>{resolvedEmptyMessage}</p>
                   </div>
                 </td>
               </tr>
@@ -147,7 +154,11 @@ export function DataTable<T>({
       {!loading && !error && totalElements > 0 && onPageChange && (
         <div className="table-pagination-footer">
           <div className="pagination-info">
-            Showing Page <strong>{page + 1}</strong> of <strong>{Math.max(1, totalPages)}</strong> ({totalElements} total records)
+            {t('common.showingPage', {
+              page: page + 1,
+              totalPages: Math.max(1, totalPages),
+              totalElements,
+            })}
           </div>
 
           <div className="pagination-controls">
@@ -157,7 +168,7 @@ export function DataTable<T>({
               disabled={page <= 0}
               onClick={() => onPageChange(page - 1)}
             >
-              <ChevronLeft size={16} /> Previous
+              <ChevronLeft size={16} /> {t('common.previous')}
             </button>
             <button
               type="button"
@@ -165,7 +176,7 @@ export function DataTable<T>({
               disabled={page >= totalPages - 1}
               onClick={() => onPageChange(page + 1)}
             >
-              Next <ChevronRight size={16} />
+              {t('common.next')} <ChevronRight size={16} />
             </button>
           </div>
         </div>

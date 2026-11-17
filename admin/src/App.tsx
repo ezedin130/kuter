@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { Sidebar, AdminTab } from './components/Sidebar';
 import { Header } from './components/Header';
 import { LoginPage } from './pages/LoginPage';
@@ -13,6 +14,7 @@ import { HealthResponse } from './api/types';
 
 function AdminShell() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   const [currentTab, setCurrentTab] = useState<AdminTab>('overview');
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loadingHealth, setLoadingHealth] = useState<boolean>(true);
@@ -71,7 +73,7 @@ function AdminShell() {
           <span />
         </div>
         <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--muted)' }}>
-          Loading Kuter Platform Administration...
+          {t('common.loadingPortal')}
         </div>
       </div>
     );
@@ -84,17 +86,17 @@ function AdminShell() {
   const getPageTitle = (tab: AdminTab): string => {
     switch (tab) {
       case 'overview':
-        return 'Platform Overview';
+        return t('overview.title');
       case 'requests':
-        return 'Registration Requests';
+        return t('requests.title');
       case 'tenants':
-        return 'Shops & Tenants Directory';
+        return t('tenants.title');
       case 'plans':
-        return 'Subscription Plans & Tiers';
+        return t('plans.title');
       case 'subscriptions':
-        return 'Tenant Subscriptions';
+        return t('subscriptions.title');
       default:
-        return 'Platform Administration';
+        return t('header.platformAdministration');
     }
   };
 
@@ -141,9 +143,11 @@ function AdminShell() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <AdminShell />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <AdminShell />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 
