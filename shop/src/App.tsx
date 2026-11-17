@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 import { ShopSidebar, ShopTab } from './components/ShopSidebar';
 import { ShopTopbar } from './components/ShopTopbar';
 import { LoginPage } from './pages/LoginPage';
@@ -18,6 +19,7 @@ import { ShopSettingsPage } from './pages/ShopSettingsPage';
 
 function ShopPortalContent() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   const [currentTab, setCurrentTab] = useState<ShopTab>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
@@ -45,7 +47,7 @@ function ShopPortalContent() {
             animation: 'spin 0.8s linear infinite',
           }}
         />
-        <span style={{ fontSize: '14px', fontWeight: 600 }}>Loading Kuter Shop Portal...</span>
+        <span style={{ fontSize: '14px', fontWeight: 600 }}>{t('common.loadingPortal')}</span>
       </div>
     );
   }
@@ -57,31 +59,31 @@ function ShopPortalContent() {
   const getPageTitle = (tab: ShopTab): string => {
     switch (tab) {
       case 'dashboard':
-        return 'Shop Dashboard';
+        return t('nav.dashboard');
       case 'sales-pos':
-        return 'Counter Point of Sale';
+        return t('nav.pos');
       case 'sales-history':
-        return 'Sales History & Records';
+        return t('nav.salesHistory');
       case 'products':
-        return 'Products & Inventory Catalog';
+        return t('nav.products');
       case 'categories':
-        return 'Product Categories';
+        return t('nav.categories');
       case 'receive-stock':
-        return 'Stock Receiving';
+        return t('nav.receiveStock');
       case 'adjustments':
-        return 'Stock Adjustments';
+        return t('nav.adjustments');
       case 'lending':
-        return 'Inter-Shop Lending & Borrowing';
+        return t('nav.lending');
       case 'movements':
-        return 'Stock Movement Ledger';
+        return t('nav.movements');
       case 'reports':
-        return 'Operational Reports';
+        return t('nav.reports');
       case 'subscription':
-        return 'Subscription & Quotas';
+        return t('nav.subscription');
       case 'settings':
-        return 'Shop Settings';
+        return t('nav.settings');
       default:
-        return 'Shop Portal';
+        return t('dashboard.title');
     }
   };
 
@@ -121,9 +123,11 @@ function ShopPortalContent() {
 
 export function App() {
   return (
-    <AuthProvider>
-      <ShopPortalContent />
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <ShopPortalContent />
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 
